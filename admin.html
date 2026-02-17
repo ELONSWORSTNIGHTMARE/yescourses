@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <title>Yescourses · Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="background">
+    <div id="circles-container"></div>
+</div>
+
+<header class="main-header">
+    <div class="logo">yescourses</div>
+    <nav class="main-nav">
+        <a href="index.html">მთავარი</a>
+        <span class="user-name">Admin panel</span>
+    </nav>
+</header>
+
+<main>
+    <section class="section">
+        <h2 class="section-title">ადმინისტრატორის პანელი</h2>
+        <p class="section-subtitle">გაყიდვები და ვიდეოების მართვა. (ამ ეტაპზე მონაცემები 0-ია, სანამ რეალურ გადახდებს არ მივაბამთ)</p>
+
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3>გაყიდვების სტატისტიკა</h3>
+                <ul class="stats-list">
+                    <li>
+                        <span>საწყისი პაკეტი</span>
+                        <span class="stat-count">0 გაყიდვა</span>
+                    </li>
+                    <li>
+                        <span>სრული მენტორშიპი</span>
+                        <span class="stat-count">0 გაყიდვა</span>
+                    </li>
+                    <li>
+                        <span>1-1 Mentorship</span>
+                        <span class="stat-count">0 გაყიდვა</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="admin-card">
+                <h3>ახალი ვიდეოს ატვირთვა (მხოლოდ საწყისი პაკეტი)</h3>
+                <form class="auth-form">
+                    <label>რომელი პაკეტი?
+                        <select name="pack_id" required>
+                            <option>საწყისი პაკეტი</option>
+                        </select>
+                    </label>
+                    <label>სათაური
+                        <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1 - დასაწყისი">
+                    </label>
+                    <label>აღწერა
+                        <textarea name="description" rows="3" placeholder="კერძო ინფორმაცია ამ გაკვეთილზე"></textarea>
+                    </label>
+                    <label>კატეგორია / რიგითობა (1 = პირველი ვიდეო)
+                        <input type="number" name="order_index" value="1" min="1">
+                    </label>
+                    <label>ვიდეო ფაილი (mp4 რეკომენდირებულია)
+                        <input type="file" name="video_file" accept="video/*" required>
+                    </label>
+                    <button type="button" class="btn-primary full-width">ვიდეოს ატვირთვა (დემო)</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <h3>არსებული ვიდეოები</h3>
+            <p style="color:#9ca3af;">ვიდეოები ჯერ არ არის ატვირთული. როდესაც რეალურ backend-ს მივაბამთ, აქ გამოჩნდება სია.</p>
+        </div>
+    </section>
+</main>
+
+<footer class="main-footer">
+    <p>© 2026 Yescourses · Admin</p>
+</footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const circlesContainer = document.getElementById("circles-container");
+    if (circlesContainer) {
+        const dots = [];
+        const dotCount = 16;
+        for (let i = 0; i < dotCount; i++) {
+            const dot = document.createElement("div");
+            dot.className = "circle";
+            const duration = 22 + Math.random() * 16;
+            const delay = Math.random() * -duration;
+            const left = Math.random() * 100;
+            const top = Math.random() * 100;
+            dot.style.left = `${left}%`;
+            dot.style.top = `${top}%`;
+            dot.style.animationDuration = `${duration}s`;
+            dot.style.animationDelay = `${delay}s`;
+            circlesContainer.appendChild(dot);
+            dots.push({ el: dot, left, top });
+        }
+
+        for (let i = 1; i < dots.length; i++) {
+            const a = dots[i - 1];
+            const b = dots[i];
+            const line = document.createElement("div");
+            line.className = "circle-line";
+
+            const x1 = a.left;
+            const y1 = a.top;
+            const x2 = b.left;
+            const y2 = b.top;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            line.style.width = `${length}vw`;
+            line.style.left = `${x1}%`;
+            line.style.top = `${y1}%`;
+            line.style.transformOrigin = "0 0";
+            line.style.transform = `rotate(${angle}deg)`;
+
+            circlesContainer.appendChild(line);
+        }
+    }
+});
+</script>
+</body>
+</html>
+

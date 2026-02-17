@@ -1,0 +1,397 @@
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+import sqlite3
+from datetime import datetime
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "data.db")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+app = Flask(__name__)
+app.config["SECRET_KEY"] = "change-this-secret-key"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+
+PACKS = {
+    "basic": {
+        "id": "basic",
+        "name": "საწყისი პაკეტი",
+        "price": 65,
+        "old_price": 90,
+        "description": [
+            "ონლაინ ტუტორიალები",
+            "ბილეთების ყიდვა",
+            "ჯავშნების გაკეთება",
+            "დაძღვევა",
+            "სახლების დაჯავშნა",
+        ],
+    },
+    "plus": {
+        "id": "plus",
+        "name": "პლუს პაკეტი",
+        "price": 107,
+        "old_price": 190,
+        "description": [
+            "კვირაში 2-3 ლექცია",
+            "წვდომა საუკეთესო დახურულ ჯგუფზე",
+            "პირდაპირი კონტაქტი მენტორებთან",
+        ],
+    },
+    "premium": {
+        "id": "premium",
+        "name": "პრემიუმ პაკეტი",
+        "price": 400,
+        "old_price": None,
+        "description": [
+            "კვირაში ორი Private ლექცია",
+            "ყველასთვის ინდივიდუალური მიდგომა",
+            "პროგრესის მონიტორინგი",
+            "მუდმივი მხარდაჭერა",
+        ],
+    },
+}
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            pack_id TEXT NOT NULL,
+            purchased_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pack_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            filename TEXT NOT NULL,
+            order_index INTEGER NOT NULL DEFAULT 1,
+            uploaded_at TEXT NOT NULL
+        )
+        """
+    )
+
+    conn.commit()
+    conn.close()
+
+
+@app.before_first_request
+def setup():
+    init_db()
+
+
+def get_current_user():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    user = cur.fetchone()
+    conn.close()
+    return user
+
+
+def user_has_pack(user_id, pack_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT 1 FROM purchases WHERE user_id = ? AND pack_id = ?",
+        (user_id, pack_id),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row is not None
+
+
+@app.route("/")
+def index():
+    user = get_current_user()
+    return render_template("index.html", packs=PACKS, user=user)
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    if not name or not email or not password:
+        flash("გთხოვ, შეავსე ყველა ველი.", "error")
+        return redirect(request.referrer or url_for("index"))
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO users (email, name, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (
+                email,
+                name,
+                generate_password_hash(password),
+                datetime.utcnow().isoformat(),
+            ),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        flash("ამ ელფოსტით მომხმარებელი უკვე არსებობს.", "error")
+        return redirect(request.referrer or url_for("index"))
+
+    cur.execute("SELECT id FROM users WHERE email = ?", (email,))
+    user = cur.fetchone()
+    conn.close()
+    session["user_id"] = user["id"]
+    flash("რეგისტრაცია წარმატებით დასრულდა!", "success")
+    return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cur.fetchone()
+    conn.close()
+
+    if not user or not check_password_hash(user["password_hash"], password):
+        flash("არასწორი ელფოსტა ან პაროლი.", "error")
+        return redirect(request.referrer or url_for("index"))
+
+    session["user_id"] = user["id"]
+    flash("შესვლა წარმატებულია!", "success")
+    return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("თქვი გამოსვლა ანგარიშიდან.", "info")
+    return redirect(url_for("index"))
+
+
+@app.route("/buy/<pack_id>", methods=["POST"])
+def buy_pack(pack_id):
+    if pack_id not in PACKS:
+        flash("ასეთი პაკეტი არ არსებობს.", "error")
+        return redirect(url_for("index"))
+
+    user = get_current_user()
+    if not user:
+        flash("პაკეტის შესაძენად გთხოვ, ჯერ დარეგისტრირდი ან შედი ანგარიშზე.", "error")
+        return redirect(url_for("index"))
+
+    if user_has_pack(user["id"], pack_id):
+        flash("ეს პაკეტი უკვე გაქვს შეძენილი.", "info")
+        return redirect(url_for("course", pack_id=pack_id))
+
+    # TODO: connect real bank payment here later.
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO purchases (user_id, pack_id, purchased_at) VALUES (?, ?, ?)",
+        (user["id"], pack_id, datetime.utcnow().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+    flash("გილოცავ! პაკეტი წარმატებით შეიძინე.", "success")
+    return redirect(url_for("course", pack_id=pack_id))
+
+
+@app.route("/course/<pack_id>")
+def course(pack_id):
+    if pack_id not in PACKS:
+        flash("ასეთი პაკეტი არ არსებობს.", "error")
+        return redirect(url_for("index"))
+
+    user = get_current_user()
+    if not user:
+        flash("კურსზე წვდომისთვის საჭიროა ავტორიზაცია.", "error")
+        return redirect(url_for("index"))
+
+    if not user_has_pack(user["id"], pack_id):
+        flash("ამ პაკეტზე წვდომა არ გაქვს. გთხოვ, ჯერ შეიძინე.", "error")
+        return redirect(url_for("index"))
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM videos WHERE pack_id = ? ORDER BY order_index ASC, uploaded_at ASC",
+        (pack_id,),
+    )
+    videos = cur.fetchall()
+    conn.close()
+
+    return render_template(
+        "course.html",
+        pack=PACKS[pack_id],
+        videos=videos,
+        user=user,
+    )
+
+
+@app.route("/admin", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+
+        if username == "yestour" and password == "yestour111":
+            session["is_admin"] = True
+            return redirect(url_for("admin_dashboard"))
+        else:
+            flash("არასწორი ადმინისტრატორის მონაცემები.", "error")
+            return redirect(url_for("admin_login"))
+
+    if session.get("is_admin"):
+        return redirect(url_for("admin_dashboard"))
+
+    return render_template("admin_login.html")
+
+
+def require_admin():
+    if not session.get("is_admin"):
+        flash("ადმინისტრატორის წვდომა შეზღუდულია.", "error")
+        return False
+    return True
+
+
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not require_admin():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+    cur = conn.cursor()
+    stats = {}
+    for pid in PACKS.keys():
+        cur.execute("SELECT COUNT(*) AS c FROM purchases WHERE pack_id = ?", (pid,))
+        row = cur.fetchone()
+        stats[pid] = row["c"] if row else 0
+
+    cur.execute(
+        "SELECT * FROM videos ORDER BY pack_id ASC, order_index ASC, uploaded_at ASC"
+    )
+    videos = cur.fetchall()
+    conn.close()
+
+    return render_template(
+        "admin_dashboard.html", packs=PACKS, stats=stats, videos=videos
+    )
+
+
+@app.route("/admin/upload_video", methods=["POST"])
+def admin_upload_video():
+    if not require_admin():
+        return redirect(url_for("admin_login"))
+
+    pack_id = request.form.get("pack_id")
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    order_index = request.form.get("order_index", "1")
+    file = request.files.get("video_file")
+
+    if pack_id not in PACKS:
+        flash("არასწორი პაკეტი.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    if not title or not file:
+        flash("სათაური და ვიდეო სავალდებულოა.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    try:
+        order_index = int(order_index)
+    except ValueError:
+        order_index = 1
+
+    filename = secure_filename(file.filename)
+    if not filename:
+        flash("არასწორი ფაილი.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    file.save(save_path)
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO videos (pack_id, title, description, filename, order_index, uploaded_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (pack_id, title, description, filename, order_index, datetime.utcnow().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+    flash("ვიდეო წარმატებით აიტვირთა.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/delete_video/<int:video_id>", methods=["POST"])
+def admin_delete_video(video_id):
+    if not require_admin():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT filename FROM videos WHERE id = ?", (video_id,))
+    video = cur.fetchone()
+    if video:
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], video["filename"])
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        cur.execute("DELETE FROM videos WHERE id = ?", (video_id,))
+        conn.commit()
+    conn.close()
+
+    flash("ვიდეო წაიშალა.", "info")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
