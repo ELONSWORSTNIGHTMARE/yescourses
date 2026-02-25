@@ -431,7 +431,7 @@ def admin_upload_video():
         return redirect(url_for("admin_page"))
 
     flash("ვიდეო წარმატებით აიტვირთა.", "success")
-    return redirect(url_for("admin_page"))
+    return redirect(url_for("course", pack_id=pack_id))
 
 
 @app.route("/admin/delete_video/<int:video_id>", methods=["POST"])

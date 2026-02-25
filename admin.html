@@ -67,7 +67,7 @@
 
             <div class="admin-card">
                 <h3>ახალი ვიდეოს ატვირთვა (საწყისი პაკეტი)</h3>
-                <form id="admin-upload-form" class="auth-form" action="#" method="post" enctype="multipart/form-data" data-upload-action="/admin/upload_video">
+                <form id="admin-upload-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data">
                     <label>რომელი პაკეტი?
                         <select name="pack_id" required>
                             <option value="basic">საწყისი პაკეტი</option>
@@ -91,7 +91,7 @@
                     <p style="margin-top:0.5rem;">
                         <button type="button" id="upload-browse-btn" class="btn-secondary">ფაილის არჩევა</button>
                     </p>
-                    <button type="button" id="admin-upload-submit-btn" class="btn-primary full-width">ვიდეოს ატვირთვა</button>
+                    <button type="submit" class="btn-primary full-width">ვიდეოს ატვირთვა</button>
                 </form>
             </div>
         </div>
@@ -183,51 +183,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     var uploadForm = document.getElementById("admin-upload-form");
-    var submitBtn = document.getElementById("admin-upload-submit-btn");
-    if (uploadForm) {
+    if (uploadForm && videoFileInput) {
         uploadForm.addEventListener("submit", function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (submitBtn) submitBtn.click();
-            return false;
-        });
-    }
-    if (uploadForm && videoFileInput && submitBtn) {
-        submitBtn.addEventListener("click", function() {
             if (!videoFileInput.files || !videoFileInput.files.length) {
+                e.preventDefault();
                 alert("გთხოვ აირჩიო ვიდეო ფაილი.");
-                return;
+                return false;
             }
-            var formData = new FormData(uploadForm);
-            var uploadUrl = (uploadForm.getAttribute("data-upload-action") || "/admin/upload_video");
-            if (uploadUrl.indexOf("http") !== 0) {
-                uploadUrl = (window.location.origin || "") + (uploadUrl.charAt(0) === "/" ? "" : "/") + uploadUrl;
-            }
-            submitBtn.disabled = true;
-            submitBtn.textContent = "იტვირთება...";
-            fetch(uploadUrl, {
-                method: "POST",
-                body: formData,
-                redirect: "follow",
-                credentials: "same-origin"
-            }).then(function(res) {
-                if (res.redirected && res.url) {
-                    window.location.href = res.url;
-                    return;
-                }
-                if (res.ok) {
-                    window.location.href = (window.location.origin || "") + "/admin";
-                    return;
-                }
-                return res.text().then(function(t) {
-                    alert("შეცდომა: " + (t || res.status));
-                });
-            }).catch(function(err) {
-                alert("ატვირთვა ვერ მოხერხდა. შეამოწმე რომ სერვერი (Flask) გაშვებულია.");
-            }).finally(function() {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "ვიდეოს ატვირთვა";
-            });
         });
     }
 });
