@@ -1,237 +1,255 @@
-<!DOCTYPE html>
-<html lang="ka">
-<head>
-    <meta charset="UTF-8">
-    <title>Yescourses · Admin</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<div class="background">
-    <div id="circles-container"></div>
-</div>
-
-<!-- Login gate: shown when not authenticated -->
-<div id="admin-gate" class="admin-gate">
+{% extends "base.html" %}
+{% block title %}Yescourses · Admin{% endblock %}
+{% block body %}
+{% if not show_dashboard %}
+{# Login gate #}
+<div class="admin-gate">
     <header class="main-header" style="position: relative;">
         <div class="logo">yescourses</div>
         <nav class="main-nav">
-            <a href="index.html">მთავარი</a>
+            <a href="{{ url_for('index') }}">მთავარი</a>
         </nav>
     </header>
     <section class="section">
         <h2 class="section-title">ადმინისტრატორის შესვლა</h2>
         <p class="section-subtitle">მხოლოდ შიდა გუნდისთვის.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="auth-message {{ messages[0][0] or '' }}" style="max-width:24rem;margin:0 auto 1rem;">{{ messages[0][1] }}</div>
+        {% endif %}
+        {% endwith %}
         <div class="centered-card">
-            <form class="auth-form" id="admin-login-form">
+            <form class="auth-form" action="{{ url_for('admin_page') }}" method="post">
                 <label>მომხმარებელი
                     <input type="text" name="username" required autocomplete="username">
                 </label>
                 <label>პაროლი
                     <input type="password" name="password" required autocomplete="current-password">
                 </label>
-                <p id="admin-gate-error" class="auth-message error" style="display: none; margin-bottom: 0.75rem;"></p>
                 <button type="submit" class="btn-primary full-width">შესვლა</button>
             </form>
         </div>
     </section>
 </div>
+{% else %}
+{# Dashboard #}
+<header class="main-header">
+    <div class="logo">yescourses</div>
+    <nav class="main-nav">
+        <a href="{{ url_for('index') }}">მთავარი</a>
+        <span class="user-name">Admin panel</span>
+        <a href="{{ url_for('admin_logout') }}" class="btn-secondary">გამოსვლა</a>
+    </nav>
+</header>
 
-<!-- Dashboard: shown when authenticated -->
-<div id="admin-panel" class="admin-panel-hidden">
-    <header class="main-header">
-        <div class="logo">yescourses</div>
-        <nav class="main-nav">
-            <a href="index.html">მთავარი</a>
-            <span class="user-name">Admin panel</span>
-            <a href="#" id="admin-logout" class="btn-secondary">გამოსვლა</a>
-        </nav>
-    </header>
+<main>
+    <section class="section">
+        <h2 class="section-title">ადმინისტრატორის პანელი</h2>
+        <p class="section-subtitle">გაყიდვები და ვიდეოების მართვა.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="auth-message {{ messages[0][0] or '' }}">{{ messages[0][1] }}</div>
+        {% endif %}
+        {% endwith %}
 
-    <main>
-        <section class="section">
-            <h2 class="section-title">ადმინისტრატორის პანელი</h2>
-            <p class="section-subtitle">გაყიდვები და ვიდეოების მართვა.</p>
-
-            <div class="admin-grid">
-                <div class="admin-card">
-                    <h3>გაყიდვების სტატისტიკა</h3>
-                    <ul class="stats-list">
-                        <li>
-                            <span>საწყისი პაკეტი</span>
-                            <span class="stat-count">0 გაყიდვა</span>
-                        </li>
-                        <li>
-                            <span>სრული მენტორშიპი</span>
-                            <span class="stat-count">0 გაყიდვა</span>
-                        </li>
-                        <li>
-                            <span>1-1 Mentorship</span>
-                            <span class="stat-count">0 გაყიდვა</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="admin-card">
-                    <h3>ახალი ვიდეოს ატვირთვა (მხოლოდ საწყისი პაკეტი)</h3>
-                    <form class="auth-form" id="admin-upload-form" action="/admin/upload_video" method="post" enctype="multipart/form-data">
-                        <label>რომელი პაკეტი?
-                            <select name="pack_id" required>
-                                <option value="basic">საწყისი პაკეტი</option>
-                            </select>
-                        </label>
-                        <label>სათაური
-                            <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1 - დასაწყისი">
-                        </label>
-                        <label>აღწერა
-                            <textarea name="description" rows="3" placeholder="კერძო ინფორმაცია ამ გაკვეთილზე"></textarea>
-                        </label>
-                        <label>კატეგორია / რიგითობა (1 = პირველი ვიდეო)
-                            <input type="number" name="order_index" value="1" min="1">
-                        </label>
-                        <label class="upload-zone" id="upload-zone">
-                            <span class="upload-label">ვიდეო ფაილი — გადმოიწიე აქ ან დააჭირე არჩევას</span>
-                            <span class="upload-hint">MP4 ან სხვა ვიდეო ფორმატი</span>
-                            <span class="file-name" id="upload-file-name"></span>
-                            <input type="file" name="video_file" id="video_file_input" accept="video/*" required>
-                        </label>
-                        <button type="submit" class="btn-primary full-width">ვიდეოს ატვირთვა</button>
-                    </form>
-                </div>
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3>გაყიდვების სტატისტიკა</h3>
+                <ul class="stats-list">
+                    {% for pid, pack in packs.items() %}
+                    <li>
+                        <span>{{ pack.name }}</span>
+                        <span class="stat-count">{{ stats.get(pid, 0) }} გაყიდვა</span>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
 
             <div class="admin-card">
-                <h3>არსებული ვიდეოები</h3>
-                <p style="color:#9ca3af;">ვიდეოები ჯერ არ არის ატვირთული. როდესაც რეალურ backend-ს მივაბამთ, აქ გამოჩნდება სია.</p>
+                <h3>ახალი ვიდეოს ატვირთვა (საწყისი პაკეტი)</h3>
+                <form id="admin-upload-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data" data-upload-url="{{ url_for('admin_upload_video') }}">
+                    <label>რომელი პაკეტი?
+                        <select name="pack_id" required>
+                            <option value="basic">საწყისი პაკეტი</option>
+                        </select>
+                    </label>
+                    <label>სათაური
+                        <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1 - დასაწყისი">
+                    </label>
+                    <label>აღწერა
+                        <textarea name="description" rows="3" placeholder="კერძო ინფორმაცია ამ გაკვეთილზე"></textarea>
+                    </label>
+                    <label>რიგითობა (1 = პირველი ვიდეო)
+                        <input type="number" name="order_index" value="1" min="1">
+                    </label>
+                    <label class="upload-zone" id="upload-zone">
+                        <span class="upload-label">ვიდეო ფაილი — გადმოიწიე აქ ან დააჭირე ქვემოთ „ფაილის არჩევა“</span>
+                        <span class="upload-hint">MP4, WebM, MOV (მაქს. 500 MB)</span>
+                        <span class="file-name" id="upload-file-name"></span>
+                        <input type="file" name="video_file" id="video_file_input" accept="video/*" required aria-label="ვიდეო ფაილი">
+                    </label>
+                    <p style="margin-top:0.5rem;">
+                        <button type="button" id="upload-browse-btn" class="btn-secondary">ფაილის არჩევა</button>
+                    </p>
+                    <button type="submit" class="btn-primary full-width">ვიდეოს ატვირთვა</button>
+                </form>
             </div>
-        </section>
-    </main>
+        </div>
 
-    <footer class="main-footer">
-        <p>© 2026 Yescourses · Admin</p>
-    </footer>
-</div>
+        <div class="admin-card">
+            <h3>არსებული ვიდეოები</h3>
+            {% if videos %}
+            <ul class="stats-list" style="list-style:none;padding:0;">
+                {% for v in videos %}
+                <li style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(148,163,184,0.2);">
+                    <span><strong>{{ v.title }}</strong> — {{ v.filename }} ({{ packs.get(v.pack_id, {}).name or v.pack_id }})</span>
+                    <form action="{{ url_for('admin_delete_video', video_id=v.id) }}" method="post" style="margin:0;" onsubmit="return confirm('წავშალოთ ეს ვიდეო?');">
+                        <button type="submit" class="btn-secondary">წაშლა</button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color:#9ca3af;">ვიდეოები ჯერ არ არის ატვირთული.</p>
+            {% endif %}
+        </div>
+    </section>
+</main>
 
+<footer class="main-footer">
+    <p>© 2026 Yescourses · Admin</p>
+</footer>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if show_dashboard %}
 <script>
-(function() {
-    var isAdmin = sessionStorage.getItem("yc_admin") === "1";
-    var gate = document.getElementById("admin-gate");
-    var panel = document.getElementById("admin-panel");
-    if (isAdmin) {
-        if (gate) gate.classList.add("admin-panel-hidden");
-        if (panel) panel.classList.remove("admin-panel-hidden");
-    } else {
-        if (gate) gate.classList.remove("admin-panel-hidden");
-        if (panel) panel.classList.add("admin-panel-hidden");
-    }
-})();
-
 document.addEventListener("DOMContentLoaded", function() {
-    var isAdmin = sessionStorage.getItem("yc_admin") === "1";
-
-    var circlesContainer = document.getElementById("circles-container");
-    if (circlesContainer) {
-        var dots = [];
-        var dotCount = 16;
-        for (var i = 0; i < dotCount; i++) {
-            var dot = document.createElement("div");
-            dot.className = "circle";
-            var duration = 22 + Math.random() * 16;
-            var delay = Math.random() * -duration;
-            var left = Math.random() * 100;
-            var top = Math.random() * 100;
-            dot.style.left = left + "%";
-            dot.style.top = top + "%";
-            dot.style.animationDuration = duration + "s";
-            dot.style.animationDelay = delay + "s";
-            circlesContainer.appendChild(dot);
-            dots.push({ left: left, top: top });
+    var c = document.getElementById("circles-container");
+    if (c) {
+        var dots = [], n = 16;
+        for (var i = 0; i < n; i++) {
+            var d = document.createElement("div"); d.className = "circle";
+            var dur = 22 + Math.random() * 16, del = Math.random() * -dur;
+            var left = Math.random() * 100, top = Math.random() * 100;
+            d.style.left = left + "%"; d.style.top = top + "%";
+            d.style.animationDuration = dur + "s"; d.style.animationDelay = del + "s";
+            c.appendChild(d); dots.push({ left: left, top: top });
         }
         for (var j = 1; j < dots.length; j++) {
-            var a = dots[j - 1];
-            var b = dots[j];
-            var line = document.createElement("div");
-            line.className = "circle-line";
-            var dx = b.left - a.left;
-            var dy = b.top - a.top;
-            var length = Math.sqrt(dx * dx + dy * dy);
-            var angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            line.style.width = length + "vw";
-            line.style.left = a.left + "%";
-            line.style.top = a.top + "%";
-            line.style.transformOrigin = "0 0";
-            line.style.transform = "rotate(" + angle + "deg)";
-            circlesContainer.appendChild(line);
+            var a = dots[j-1], b = dots[j];
+            var line = document.createElement("div"); line.className = "circle-line";
+            var dx = b.left - a.left, dy = b.top - a.top;
+            var len = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx)*180/Math.PI;
+            line.style.width = len + "vw"; line.style.left = a.left + "%"; line.style.top = a.top + "%";
+            line.style.transformOrigin = "0 0"; line.style.transform = "rotate(" + angle + "deg)";
+            c.appendChild(line);
         }
     }
-
-    var loginForm = document.getElementById("admin-login-form");
-    if (loginForm) {
-        loginForm.addEventListener("submit", function(e) {
-            e.preventDefault();
-            var username = loginForm.username.value.trim();
-            var password = loginForm.password.value.trim();
-            var errEl = document.getElementById("admin-gate-error");
-            if (username === "ADMIN" && password === "yestour111") {
-                sessionStorage.setItem("yc_admin", "1");
-                window.location.reload();
-            } else {
-                if (errEl) {
-                    errEl.textContent = "არასწორი მომხმარებელი ან პაროლი.";
-                    errEl.style.display = "block";
-                }
-            }
-        });
-    }
-
-    var logoutBtn = document.getElementById("admin-logout");
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", function(e) {
-            e.preventDefault();
-            sessionStorage.removeItem("yc_admin");
-            window.location.reload();
-        });
-    }
-
     var uploadZone = document.getElementById("upload-zone");
     var videoFileInput = document.getElementById("video_file_input");
     var uploadFileName = document.getElementById("upload-file-name");
+    var browseBtn = document.getElementById("upload-browse-btn");
+    function showSelectedName() {
+        if (uploadFileName && videoFileInput && videoFileInput.files && videoFileInput.files.length) {
+            uploadFileName.textContent = videoFileInput.files[0].name;
+        } else if (uploadFileName) {
+            uploadFileName.textContent = "";
+        }
+    }
+    if (videoFileInput) {
+        videoFileInput.addEventListener("change", showSelectedName);
+    }
+    if (browseBtn && videoFileInput) {
+        browseBtn.addEventListener("click", function() { videoFileInput.click(); });
+    }
     if (uploadZone && videoFileInput) {
-        uploadZone.addEventListener("click", function() { videoFileInput.click(); });
-        uploadZone.addEventListener("dragover", function(e) {
+        uploadZone.addEventListener("click", function(e) {
             e.preventDefault();
-            e.stopPropagation();
-            uploadZone.classList.add("drag-over");
+            videoFileInput.click();
         });
-        uploadZone.addEventListener("dragleave", function(e) {
-            e.preventDefault();
-            uploadZone.classList.remove("drag-over");
-        });
+        uploadZone.addEventListener("dragover", function(e) { e.preventDefault(); e.stopPropagation(); uploadZone.classList.add("drag-over"); });
+        uploadZone.addEventListener("dragleave", function(e) { e.preventDefault(); uploadZone.classList.remove("drag-over"); });
         uploadZone.addEventListener("drop", function(e) {
             e.preventDefault();
             e.stopPropagation();
             uploadZone.classList.remove("drag-over");
-            var files = e.dataTransfer.files;
-            if (files.length) {
-                videoFileInput.files = files;
-                if (uploadFileName) uploadFileName.textContent = files[0].name;
+            if (e.dataTransfer.files && e.dataTransfer.files.length) {
+                videoFileInput.files = e.dataTransfer.files;
+                showSelectedName();
             }
-        });
-        videoFileInput.addEventListener("change", function() {
-            if (uploadFileName) uploadFileName.textContent = this.files.length ? this.files[0].name : "";
         });
     }
-
     var uploadForm = document.getElementById("admin-upload-form");
-    if (uploadForm) {
+    if (uploadForm && videoFileInput) {
         uploadForm.addEventListener("submit", function(e) {
-            if (!videoFileInput || !videoFileInput.files || !videoFileInput.files.length) {
-                e.preventDefault();
+            e.preventDefault();
+            if (!videoFileInput.files || !videoFileInput.files.length) {
                 alert("გთხოვ აირჩიო ვიდეო ფაილი.");
+                return;
             }
+            var formData = new FormData(uploadForm);
+            var uploadUrl = uploadForm.getAttribute("data-upload-url") || uploadForm.action || "/admin/upload_video";
+            var submitBtn = uploadForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "იტვირთება...";
+            }
+            fetch(uploadUrl, {
+                method: "POST",
+                body: formData,
+                redirect: "follow",
+                credentials: "same-origin"
+            }).then(function(res) {
+                if (res.redirected) {
+                    window.location.href = res.url;
+                    return;
+                }
+                if (res.ok) {
+                    window.location.href = "/admin";
+                    return;
+                }
+                return res.text().then(function(t) {
+                    alert("შეცდომა: " + (t || res.status));
+                });
+            }).catch(function(err) {
+                alert("ატვირთვა ვერ მოხერხდა. შეამოწმე რომ სერვერი (Flask) გაშვებულია.");
+            }).finally(function() {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "ვიდეოს ატვირთვა";
+                }
+            });
         });
     }
 });
 </script>
-</body>
-</html>
+{% else %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var c = document.getElementById("circles-container");
+    if (c) {
+        var dots = [], n = 16;
+        for (var i = 0; i < n; i++) {
+            var d = document.createElement("div"); d.className = "circle";
+            var dur = 22 + Math.random() * 16, del = Math.random() * -dur;
+            var left = Math.random() * 100, top = Math.random() * 100;
+            d.style.left = left + "%"; d.style.top = top + "%";
+            d.style.animationDuration = dur + "s"; d.style.animationDelay = del + "s";
+            c.appendChild(d); dots.push({ left: left, top: top });
+        }
+        for (var j = 1; j < dots.length; j++) {
+            var a = dots[j-1], b = dots[j];
+            var line = document.createElement("div"); line.className = "circle-line";
+            var dx = b.left - a.left, dy = b.top - a.top;
+            var len = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx)*180/Math.PI;
+            line.style.width = len + "vw"; line.style.left = a.left + "%"; line.style.top = a.top + "%";
+            line.style.transformOrigin = "0 0"; line.style.transform = "rotate(" + angle + "deg)";
+            c.appendChild(line);
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

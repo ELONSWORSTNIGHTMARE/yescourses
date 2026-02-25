@@ -1,23 +1,18 @@
-<!DOCTYPE html>
-<html lang="ka">
-<head>
-    <meta charset="UTF-8">
-    <title>Yescourses</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<div class="background">
-    <div id="circles-container"></div>
-</div>
-
+{% extends "base.html" %}
+{% block title %}Yescourses{% endblock %}
+{% block body %}
 <header class="main-header">
     <div class="logo">yescourses</div>
     <nav class="main-nav">
         <a href="#features">ფუნქციები</a>
         <a href="#join">შემოგვიერთდი</a>
         <a href="#about">ჩვენს შესახებ</a>
+        {% if user %}
+        <span class="user-name">{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}" class="btn-secondary">გამოსვლა</a>
+        {% else %}
         <button class="btn-secondary" id="open-auth-modal">შესვლა / რეგისტრაცია</button>
+        {% endif %}
     </nav>
 </header>
 
@@ -40,54 +35,32 @@
         <h2 class="section-title">აირჩიე შენი პაკეტი</h2>
         <p class="section-subtitle">მონახე ის ფორმატი, რომელიც ყველაზე მეტად გიხდება.</p>
         <div class="pricing-grid">
-            <div class="price-card">
-                <div class="price-badge">საწყისი ვარიანტი</div>
-                <h3 class="price-title">საწყისი პაკეტი</h3>
+            {% for pack_id, pack in packs.items() %}
+            <div class="price-card{% if pack_id == 'plus' %} featured{% endif %}">
+                <div class="price-badge{% if pack_id == 'plus' %} accent{% endif %}">
+                    {% if pack_id == 'basic' %}საწყისი ვარიანტი{% elif pack_id == 'plus' %}ყველაზე პოპულარული{% else %}საუკეთესო მხარდაჭერა{% endif %}
+                </div>
+                <h3 class="price-title">{{ pack.name }}</h3>
                 <div class="price-row">
-                    <span class="current-price">65₾</span>
-                    <span class="old-price">90₾</span>
+                    <span class="current-price">{{ pack.price }}₾</span>
+                    {% if pack.old_price %}<span class="old-price">{{ pack.old_price }}₾</span>{% endif %}
                 </div>
                 <ul class="price-features">
-                    <li>ონლაინ ტუტორიალები</li>
-                    <li>ბილეთების ყიდვა</li>
-                    <li>ჯავშნების გაკეთება</li>
-                    <li>დაძღვევა</li>
-                    <li>სახლების დაჯავშნა</li>
+                    {% for item in pack.description %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
                 </ul>
-                <button class="btn-primary full-width choose-pack">ავირჩიო საწყისი პაკეტი</button>
+                {% if user and pack_id in purchased_pack_ids %}
+                <a href="{{ url_for('course', pack_id=pack_id) }}" class="btn-primary full-width">კურსის გვერდი</a>
+                {% elif user %}
+                <form action="{{ url_for('buy_pack', pack_id=pack_id) }}" method="post" style="margin:0;">
+                    <button type="submit" class="btn-primary full-width">ვიყიდო</button>
+                </form>
+                {% else %}
+                <button type="button" class="btn-primary full-width choose-pack">ავირჩიო</button>
+                {% endif %}
             </div>
-
-            <div class="price-card featured">
-                <div class="price-badge accent">ყველაზე პოპულარული</div>
-                <h3 class="price-title">სრული მენტორშიპი</h3>
-                <div class="price-row">
-                    <span class="current-price">107₾</span>
-                    <span class="old-price">190₾</span>
-                </div>
-                <ul class="price-features">
-                    <li>იდეალურია მათთვის, ვინც ნულიდან იწყებს.</li>
-                    <li>კვირაში 2-3 ლექცია</li>
-                    <li>წვდომა საუკეთესო დახურულ ჯგუფზე</li>
-                    <li>პირდაპირი კონტაქტი მენტორებთან</li>
-                </ul>
-                <button class="btn-primary full-width choose-pack">ავირჩიო პლუს პაკეტი</button>
-            </div>
-
-            <div class="price-card">
-                <div class="price-badge">საუკეთესო მხარდაჭერა</div>
-                <h3 class="price-title">1-1 Mentorship</h3>
-                <div class="price-row">
-                    <span class="current-price">400₾</span>
-                </div>
-                <ul class="price-features">
-                    <li>იდეალურია მათთვის, ვისაც სურს 1-1 სწავლა პირად მენტორთან.</li>
-                    <li>კვირაში ორი Private ლექცია</li>
-                    <li>ყველასთვის ინდივიდუალური მიდგომა</li>
-                    <li>პროგრესის მონიტორინგი</li>
-                    <li>მუდმივი მხარდაჭერა</li>
-                </ul>
-                <button class="btn-primary full-width choose-pack">ავირჩიო პრემიუმ პაკეტი</button>
-            </div>
+            {% endfor %}
         </div>
     </section>
 
@@ -100,11 +73,7 @@
                     <span class="faq-arrow">▼</span>
                 </button>
                 <div class="faq-answer">
-                    <p>
-                        yescourses არის yestour-ის ონლაინ სასწავლო პლატფორმა, სადაც სტუდენტები სწავლობენ
-                        მოგზაურობასთან, ბილეთების ყიდვასთან და ჯავშნებთან დაკავშირებულ პრაქტიკულ უნარებს და
-                        საუკეთესო სტუდენტები იღებენ დასაქმების შესაძლებლობას.
-                    </p>
+                    <p>yescourses არის yestour-ის ონლაინ სასწავლო პლატფორმა.</p>
                 </div>
             </div>
             <div class="faq-item">
@@ -113,22 +82,7 @@
                     <span class="faq-arrow">▼</span>
                 </button>
                 <div class="faq-answer">
-                    <p>
-                        ზედა მარჯვენა კუთხეში დააჭირე „შესვლა / რეგისტრაცია“-ს, შეიყვანე შენი მონაცემები და
-                        შექმენი ანგარიში ერთი წუთში.
-                    </p>
-                </div>
-            </div>
-            <div class="faq-item">
-                <button class="faq-question">
-                    <span>შემიძლია თუ არა კურსზე წვდომა სხვასთან გავიზიარო?</span>
-                    <span class="faq-arrow">▼</span>
-                </button>
-                <div class="faq-answer">
-                    <p>
-                        კურსზე წვდომა მიბმულია მხოლოდ შენს ანგარიშზე. ბმულის გაგზავნა სხვებისთვის არ იმუშავებს,
-                        რადგან კურსის გვერდზე შესასვლელად აუცილებელია ავტორიზაცია და შეძენილი პაკეტი.
-                    </p>
+                    <p>ზედა მარჯვენა კუთხეში დააჭირე „შესვლა / რეგისტრაცია“-ს.</p>
                 </div>
             </div>
         </div>
@@ -139,245 +93,117 @@
         <div class="features-grid">
             <div class="feature-card">
                 <h3>ჭკვიანი მოგზაურობა</h3>
-                <p>ისწავლე როგორ დაგეგმო მოგზაურობა სრულად ონლაინ — ბილეთებიდან სასტუმრომდე.</p>
+                <p>ისწავლე როგორ დაგეგმო მოგზაურობა ონლაინ.</p>
             </div>
             <div class="feature-card">
                 <h3>პრაქტიკული ტუტორიალები</h3>
-                <p>რეალური მაგალითებით ახსნილი გაკვეთილები, რომლებსაც ყოველდღე გამოიყენებ.</p>
+                <p>რეალური მაგალითებით გაკვეთილები.</p>
             </div>
             <div class="feature-card">
                 <h3>მენტორების მხარდაჭერა</h3>
-                <p>პირდაპირი კონტაქტი გამოცდილ მენტორებთან და დახურულ ჯგუფებთან.</p>
+                <p>პირდაპირი კონტაქტი მენტორებთან.</p>
             </div>
         </div>
     </section>
-
 </main>
 
 <footer class="main-footer">
     <div class="footer-legal">
-        <h3 id="about">ინფორმაცია კომპანიის შესახებ</h3>
-        <p>yescourses — yestour-ის ონლაინ სასწავლო პლატფორმა. ვსწავლობთ ტურიზმს, ბილეთების ყიდვას, ჯავშნებს და მოგზაურობასთან დაკავშირებულ პრაქტიკულ უნარებს; კურსის დასრულების შემდეგ მონაწილეები იღებენ სერტიფიკატს.</p>
-
-        <h3>მერჩანტის საკონტაქტო ინფორმაცია</h3>
-        <p>ტელეფონი: <a href="tel:+995555494696">+995 555 494 696</a><br>ელფოსტა: <a href="mailto:yestour111@gmail.com">yestour111@gmail.com</a></p>
-
-        <h3>პროდუქტის/მომსახურების აღწერა</h3>
-        <p>კურსები, რომლებიც ასწავლის ტურიზმს, ბილეთების ყიდვას, ჯავშნების გაკეთებას და მოგზაურობასთან დაკავშირებულ უნარებს. კურსების დასრულების შემდეგ მონაწილეები იღებენ სერტიფიკატს.</p>
-
-        <h3>შეკვეთის მიწოდების, დაბრუნების, გაუქმების და თანხის დაბრუნების პოლიტიკა</h3>
-        <p>კურსების სწავლება ხდება ონლაინ. თანხის დაბრუნება კურსების ყიდვის შემდეგ შეუძლებელია.</p>
-
-        <h3>კონფიდენციალურობის პოლიტიკა</h3>
-        <p>ჩვენ ვიყენებთ მხოლოდ იმ მონაცემებს, რაც საჭიროა რეგისტრაციისა და კურსებზე წვდომისთვის. თქვენი ელფოსტა და პირადი ინფორმაცია არ გადაეცემა მესამე მხარეს. მონაცემების დაცვა ხორციელდება შესაბამისი ტექნიკური და ორგანიზაციული ზომებით.</p>
-
-        <p style="margin-top: 1.5rem; color: #6b7280;">© 2026 Yescourses · yestour</p>
+        <h3 id="about">ჩვენს შესახებ</h3>
+        <p>yescourses — yestour-ის ონლაინ სასწავლო პლატფორმა.</p>
+        <p>ტელ: <a href="tel:+995555494696">+995 555 494 696</a> · <a href="mailto:yestour111@gmail.com">yestour111@gmail.com</a></p>
+        <p style="margin-top:1rem;color:#6b7280;">© 2026 Yescourses · yestour</p>
     </div>
 </footer>
 
+{% if not user %}
 <div id="auth-modal" class="modal hidden">
     <div class="modal-content">
         <button class="modal-close" id="close-auth-modal">&times;</button>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div id="auth-message" class="auth-message {{ messages[0][0] or '' }}">{{ messages[0][1] }}</div>
+        {% else %}
+        <div id="auth-message" class="auth-message"></div>
+        {% endif %}
+        {% endwith %}
         <div class="modal-tabs">
             <button class="tab-button active" data-tab="register-tab">რეგისტრაცია</button>
             <button class="tab-button" data-tab="login-tab">შესვლა</button>
         </div>
-        <div id="auth-message" class="auth-message"></div>
         <div class="tab-panel active" id="register-tab">
-            <form class="auth-form" id="register-form">
-                <label>სრული სახელი
-                    <input type="text" name="name" placeholder="მაგ: ნინო ბერიძე" required>
-                </label>
-                <label>ელფოსტა
-                    <input type="email" name="email" placeholder="you@example.com" required>
-                </label>
-                <label>პაროლი
-                    <input type="password" name="password" minlength="6" required>
-                </label>
+            <form class="auth-form" id="register-form" action="{{ url_for('register') }}" method="post">
+                <label>სრული სახელი <input type="text" name="name" placeholder="მაგ: ნინო ბერიძე" required></label>
+                <label>ელფოსტა <input type="email" name="email" placeholder="you@example.com" required></label>
+                <label>პაროლი <input type="password" name="password" minlength="6" required></label>
                 <button type="submit" class="btn-primary full-width">რეგისტრაცია</button>
             </form>
         </div>
         <div class="tab-panel" id="login-tab">
-            <form class="auth-form" id="login-form">
-                <label>ელფოსტა
-                    <input type="email" name="email" required>
-                </label>
-                <label>პაროლი
-                    <input type="password" name="password" required>
-                </label>
+            <form class="auth-form" id="login-form" action="{{ url_for('login') }}" method="post">
+                <label>ელფოსტა <input type="email" name="email" required></label>
+                <label>პაროლი <input type="password" name="password" required></label>
                 <button type="submit" class="btn-primary full-width">შესვლა</button>
             </form>
         </div>
     </div>
 </div>
+{% endif %}
+{% endblock %}
 
+{% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const circlesContainer = document.getElementById("circles-container");
-    if (circlesContainer) {
-        const dots = [];
-        const dotCount = 18;
-        for (let i = 0; i < dotCount; i++) {
-            const dot = document.createElement("div");
-            dot.className = "circle";
-            const duration = 22 + Math.random() * 16;
-            const delay = Math.random() * -duration;
-            const left = Math.random() * 100;
-            const top = Math.random() * 100;
-            dot.style.left = `${left}%`;
-            dot.style.top = `${top}%`;
-            dot.style.animationDuration = `${duration}s`;
-            dot.style.animationDelay = `${delay}s`;
-            circlesContainer.appendChild(dot);
-            dots.push({ el: dot, left, top });
+document.addEventListener("DOMContentLoaded", function() {
+    var c = document.getElementById("circles-container");
+    if (c) {
+        var dots = [], n = 18;
+        for (var i = 0; i < n; i++) {
+            var d = document.createElement("div"); d.className = "circle";
+            var dur = 22 + Math.random() * 16, del = Math.random() * -dur;
+            var left = Math.random() * 100, top = Math.random() * 100;
+            d.style.left = left + "%"; d.style.top = top + "%";
+            d.style.animationDuration = dur + "s"; d.style.animationDelay = del + "s";
+            c.appendChild(d); dots.push({ left: left, top: top });
         }
-
-        for (let i = 1; i < dots.length; i++) {
-            const a = dots[i - 1];
-            const b = dots[i];
-            const line = document.createElement("div");
-            line.className = "circle-line";
-
-            const x1 = a.left;
-            const y1 = a.top;
-            const x2 = b.left;
-            const y2 = b.top;
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-            line.style.width = `${length}vw`;
-            line.style.left = `${x1}%`;
-            line.style.top = `${y1}%`;
-            line.style.transformOrigin = "0 0";
-            line.style.transform = `rotate(${angle}deg)`;
-
-            circlesContainer.appendChild(line);
+        for (var j = 1; j < dots.length; j++) {
+            var a = dots[j-1], b = dots[j];
+            var line = document.createElement("div"); line.className = "circle-line";
+            var dx = b.left - a.left, dy = b.top - a.top;
+            var len = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx)*180/Math.PI;
+            line.style.width = len + "vw"; line.style.left = a.left + "%"; line.style.top = a.top + "%";
+            line.style.transformOrigin = "0 0"; line.style.transform = "rotate(" + angle + "deg)";
+            c.appendChild(line);
         }
     }
-
-    const faqItems = document.querySelectorAll(".faq-item");
-    faqItems.forEach((item) => {
-        const btn = item.querySelector(".faq-question");
-        btn.addEventListener("click", () => {
-            const isOpen = item.classList.contains("open");
-            faqItems.forEach((i) => i.classList.remove("open"));
-            if (!isOpen) item.classList.add("open");
+    var faq = document.querySelectorAll(".faq-item");
+    faq.forEach(function(item) {
+        var btn = item.querySelector(".faq-question");
+        if (btn) btn.addEventListener("click", function() {
+            var open = item.classList.contains("open");
+            faq.forEach(function(i) { i.classList.remove("open"); });
+            if (!open) item.classList.add("open");
         });
     });
-
-    const authModal = document.getElementById("auth-modal");
-    const openAuth = document.getElementById("open-auth-modal");
-    const closeAuth = document.getElementById("close-auth-modal");
-    const heroStartBtn = document.getElementById("hero-start-btn");
-    const authMessage = document.getElementById("auth-message");
-
-    function showModal() {
-        authModal.classList.remove("hidden");
+    var modal = document.getElementById("auth-modal");
+    if (modal) {
+        var openBtn = document.getElementById("open-auth-modal");
+        var closeBtn = document.getElementById("close-auth-modal");
+        var heroBtn = document.getElementById("hero-start-btn");
+        if (openBtn) openBtn.addEventListener("click", function() { modal.classList.remove("hidden"); });
+        if (heroBtn) heroBtn.addEventListener("click", function() { modal.classList.remove("hidden"); });
+        if (closeBtn) closeBtn.addEventListener("click", function() { modal.classList.add("hidden"); });
+        modal.addEventListener("click", function(e) { if (e.target === modal) modal.classList.add("hidden"); });
     }
-    function hideModal() {
-        authModal.classList.add("hidden");
-        if (authMessage) {
-            authMessage.className = "auth-message";
-            authMessage.textContent = "";
-        }
-    }
-
-    openAuth.addEventListener("click", showModal);
-    heroStartBtn.addEventListener("click", showModal);
-    closeAuth.addEventListener("click", hideModal);
-    authModal.addEventListener("click", (e) => {
-        if (e.target === authModal) hideModal();
-    });
-
-    const tabButtons = document.querySelectorAll(".tab-button");
-    const tabPanels = document.querySelectorAll(".tab-panel");
-    tabButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const target = btn.dataset.tab;
-            tabButtons.forEach((b) => b.classList.remove("active"));
-            tabPanels.forEach((p) => p.classList.remove("active"));
-            btn.classList.add("active");
-            document.getElementById(target).classList.add("active");
-        });
-    });
-
-    const chooseButtons = document.querySelectorAll(".choose-pack");
-    chooseButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            showModal();
-        });
-    });
-
-    // simple local demo auth using localStorage
-    function getUsers() {
-        try {
-            return JSON.parse(localStorage.getItem("yc_users") || "[]");
-        } catch {
-            return [];
-        }
-    }
-
-    function saveUsers(users) {
-        localStorage.setItem("yc_users", JSON.stringify(users));
-    }
-
-    function showAuthMessage(text, kind) {
-        if (!authMessage) return;
-        authMessage.textContent = text;
-        authMessage.className = "auth-message " + (kind || "");
-    }
-
-    const registerForm = document.getElementById("register-form");
-    if (registerForm) {
-        registerForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const name = form.name.value.trim();
-            const email = form.email.value.trim().toLowerCase();
-            const password = form.password.value;
-
-            if (!name || !email || !password) {
-                showAuthMessage("გთხოვ, შეავსო ყველა ველი.", "error");
-                return;
+    var choosePack = document.querySelectorAll(".choose-pack");
+    choosePack.forEach(function(btn) {
+        btn.addEventListener("click", function(e) {
+            if (btn.tagName === "BUTTON" && !btn.querySelector("a")) {
+                var modal = document.getElementById("auth-modal");
+                if (modal && !modal.classList.contains("hidden")) return;
+                if (modal) modal.classList.remove("hidden");
             }
-
-            const users = getUsers();
-            if (users.some((u) => u.email === email)) {
-                showAuthMessage("ეს ელფოსტა უკვე გამოყენებულია, სცადე სხვა.", "error");
-                return;
-            }
-
-            users.push({ name, email, password });
-            saveUsers(users);
-            showAuthMessage("რეგისტრაცია წარმატებულია! ახლა შეგიძლია შეხვიდე ანგარიშში.", "success");
-            form.reset();
         });
-    }
-
-    const loginForm = document.getElementById("login-form");
-    if (loginForm) {
-        loginForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const email = form.email.value.trim().toLowerCase();
-            const password = form.password.value;
-            const users = getUsers();
-
-            const found = users.find((u) => u.email === email && u.password === password);
-            if (!found) {
-                showAuthMessage("ელფოსტა ან პაროლი არასწორია.", "error");
-                return;
-            }
-
-            showAuthMessage("შესვლა წარმატებით შესრულდა!", "success");
-            form.reset();
-            setTimeout(hideModal, 800);
-        });
-    }
+    });
 });
 </script>
-</body>
-</html>
-
+{% endblock %}
