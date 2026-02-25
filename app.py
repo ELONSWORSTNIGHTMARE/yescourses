@@ -19,11 +19,18 @@ else:
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=BASE_DIR,
+    static_folder="public",
+    static_url_path="",
+)
 app.config["SECRET_KEY"] = "change-this-secret-key"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # Allow video uploads up to 500 MB
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
 
 PACKS = {
