@@ -67,7 +67,7 @@
 
             <div class="admin-card">
                 <h3>ახალი ვიდეოს ატვირთვა (საწყისი პაკეტი)</h3>
-                <form id="admin-upload-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data" data-upload-url="{{ url_for('admin_upload_video') }}">
+                <form id="admin-upload-form" class="auth-form" action="/admin/upload_video" method="post" enctype="multipart/form-data">
                     <label>რომელი პაკეტი?
                         <select name="pack_id" required>
                             <option value="basic">საწყისი პაკეტი</option>
@@ -185,12 +185,13 @@ document.addEventListener("DOMContentLoaded", function() {
     if (uploadForm && videoFileInput) {
         uploadForm.addEventListener("submit", function(e) {
             e.preventDefault();
+            e.stopPropagation();
             if (!videoFileInput.files || !videoFileInput.files.length) {
                 alert("გთხოვ აირჩიო ვიდეო ფაილი.");
-                return;
+                return false;
             }
             var formData = new FormData(uploadForm);
-            var uploadUrl = uploadForm.getAttribute("data-upload-url") || uploadForm.action || "/admin/upload_video";
+            var uploadUrl = "/admin/upload_video";
             var submitBtn = uploadForm.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -202,7 +203,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 redirect: "follow",
                 credentials: "same-origin"
             }).then(function(res) {
-                if (res.redirected) {
+                if (res.redirected && res.url) {
                     window.location.href = res.url;
                     return;
                 }
@@ -221,6 +222,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     submitBtn.textContent = "ვიდეოს ატვირთვა";
                 }
             });
+            return false;
         });
     }
 });
