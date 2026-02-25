@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 import os
 import sqlite3
 from datetime import datetime
@@ -15,6 +16,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-this-secret-key"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+# Allow video uploads up to 500 MB
+app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
 
 PACKS = {
@@ -330,8 +333,17 @@ def admin_page():
     return render_template("admin.html", show_dashboard=False)
 
 
-@app.route("/admin/upload_video", methods=["POST"])
+@app.errorhandler(RequestEntityTooLarge)
+def handle_large_upload(e):
+    flash("ვიდეო ძალიან დიდია. მაქსიმუმ 500 MB.", "error")
+    return redirect(url_for("admin_page"))
+
+
+@app.route("/admin/upload_video", methods=["GET", "POST"])
 def admin_upload_video():
+    # GET should never show a page here — always go back to admin
+    if request.method == "GET":
+        return redirect(url_for("admin_page"))
     if not require_admin():
         return redirect(url_for("admin_page"))
 
@@ -345,34 +357,54 @@ def admin_upload_video():
         flash("არასწორი პაკეტი.", "error")
         return redirect(url_for("admin_page"))
 
-    if not title or not file or file.filename == "":
-        flash("სათაური და ვიდეო სავალდებულოა.", "error")
+    if not title:
+        flash("სათაური სავალდებულოა.", "error")
+        return redirect(url_for("admin_page"))
+
+    if not file or not getattr(file, "filename", None) or not (file.filename or "").strip():
+        flash("გთხოვ აირჩიო ვიდეო ფაილი.", "error")
         return redirect(url_for("admin_page"))
 
     try:
         order_index = int(order_index)
-    except ValueError:
+    except (ValueError, TypeError):
         order_index = 1
 
-    filename = secure_filename(file.filename)
-    if not filename:
-        flash("არასწორი ფაილი.", "error")
-        return redirect(url_for("admin_page"))
+    base_name = secure_filename(file.filename)
+    if not base_name:
+        base_name = "video"
+    name, ext = os.path.splitext(base_name)
+    if not ext or ext.lower() not in (".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"):
+        ext = ".mp4"
+    filename = f"{name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}{ext}"
 
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(save_path)
+    try:
+        file.save(save_path)
+    except Exception as e:
+        flash("ვიდეოს შენახვა ვერ მოხერხდა.", "error")
+        return redirect(url_for("admin_page"))
 
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO videos (pack_id, title, description, filename, order_index, uploaded_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (pack_id, title, description, filename, order_index, datetime.utcnow().isoformat()),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO videos (pack_id, title, description, filename, order_index, uploaded_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (pack_id, title, description, filename, order_index, datetime.utcnow().isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        if os.path.exists(save_path):
+            try:
+                os.remove(save_path)
+            except OSError:
+                pass
+        flash("ბაზაში ჩაწერა ვერ მოხერხდა.", "error")
+        return redirect(url_for("admin_page"))
 
     flash("ვიდეო წარმატებით აიტვირთა.", "success")
     return redirect(url_for("admin_page"))
