@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -36,14 +36,25 @@ PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
 @app.route("/styles.css")
 def serve_css():
-    # Prefer project root (BASE_DIR) so main site CSS works everywhere
-    for directory in (BASE_DIR, PUBLIC_DIR):
-        path = os.path.join(directory, "styles.css")
-        if os.path.isfile(path):
-            r = send_from_directory(directory, "styles.css", mimetype="text/css")
+    path = os.path.join(BASE_DIR, "styles.css")
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                css = f.read()
+            r = Response(css, mimetype="text/css")
             r.headers["Cache-Control"] = "public, max-age=300"
             return r
-    return "/* CSS not found */", 404, {"Content-Type": "text/css"}
+        except Exception:
+            pass
+    path_public = os.path.join(PUBLIC_DIR, "styles.css")
+    if os.path.isfile(path_public):
+        try:
+            with open(path_public, "r", encoding="utf-8", errors="replace") as f:
+                css = f.read()
+            return Response(css, mimetype="text/css")
+        except Exception:
+            pass
+    return Response("/* styles.css not found */", mimetype="text/css", status=404)
 
 
 @app.route("/main.js")
