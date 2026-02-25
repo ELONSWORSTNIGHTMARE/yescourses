@@ -22,8 +22,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app = Flask(
     __name__,
     template_folder=BASE_DIR,
-    static_folder="public",
-    static_url_path="",
 )
 app.config["SECRET_KEY"] = "change-this-secret-key"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -31,6 +29,24 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+
+
+@app.route("/styles.css")
+def serve_css():
+    for directory in (PUBLIC_DIR, BASE_DIR):
+        path = os.path.join(directory, "styles.css")
+        if os.path.isfile(path):
+            return send_from_directory(directory, "styles.css", mimetype="text/css")
+    return "/* CSS not found */", 404, {"Content-Type": "text/css"}
+
+
+@app.route("/main.js")
+def serve_js():
+    for directory in (PUBLIC_DIR, BASE_DIR):
+        path = os.path.join(directory, "main.js")
+        if os.path.isfile(path):
+            return send_from_directory(directory, "main.js", mimetype="application/javascript")
+    return "// JS not found", 404, {"Content-Type": "application/javascript"}
 
 
 PACKS = {
@@ -549,20 +565,6 @@ def admin_delete_video(video_id):
 def admin_logout():
     session.pop("is_admin", None)
     return redirect(url_for("admin_page"))
-
-
-@app.route("/styles.css")
-def serve_css():
-    if os.path.isfile(os.path.join(PUBLIC_DIR, "styles.css")):
-        return send_from_directory(PUBLIC_DIR, "styles.css", mimetype="text/css")
-    return send_from_directory(BASE_DIR, "styles.css", mimetype="text/css")
-
-
-@app.route("/main.js")
-def serve_js():
-    if os.path.isfile(os.path.join(PUBLIC_DIR, "main.js")):
-        return send_from_directory(PUBLIC_DIR, "main.js", mimetype="application/javascript")
-    return send_from_directory(BASE_DIR, "main.js", mimetype="application/javascript")
 
 
 @app.route("/uploads/<path:filename>")
