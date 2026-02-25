@@ -461,6 +461,20 @@ def admin_logout():
     return redirect(url_for("admin_page"))
 
 
+@app.route("/styles.css")
+def serve_css():
+    if os.path.isfile(os.path.join(PUBLIC_DIR, "styles.css")):
+        return send_from_directory(PUBLIC_DIR, "styles.css", mimetype="text/css")
+    return send_from_directory(BASE_DIR, "styles.css", mimetype="text/css")
+
+
+@app.route("/main.js")
+def serve_js():
+    if os.path.isfile(os.path.join(PUBLIC_DIR, "main.js")):
+        return send_from_directory(PUBLIC_DIR, "main.js", mimetype="application/javascript")
+    return send_from_directory(BASE_DIR, "main.js", mimetype="application/javascript")
+
+
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
