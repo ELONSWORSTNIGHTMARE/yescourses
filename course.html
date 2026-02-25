@@ -7,6 +7,7 @@
         <a href="{{ url_for('index') }}">მთავარი</a>
         <a href="{{ url_for('index') }}#pricing">პაკეტები</a>
         <a href="#discord">Discord</a>
+        {% if is_admin %}<a href="{{ url_for('admin_page') }}" class="btn-secondary">ადმინ პანელი</a>{% endif %}
     </nav>
 </header>
 
@@ -45,6 +46,32 @@
             {% endfor %}
         </div>
     </section>
+
+    {% if is_admin %}
+    <section class="section">
+        <div class="admin-card">
+            <h3 class="section-title">ადმინი: ვიდეოს ატვირთვა ამ კურსზე</h3>
+            <form id="course-upload-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="pack_id" value="{{ pack_id }}">
+                <label>სათაური
+                    <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1">
+                </label>
+                <label>აღწერა
+                    <textarea name="description" rows="2" placeholder="აღწერა (არასავალდებულო)"></textarea>
+                </label>
+                <label>რიგითობა
+                    <input type="number" name="order_index" value="1" min="1">
+                </label>
+                <label class="upload-zone" id="course-upload-zone">
+                    <span class="upload-label">ვიდეო ფაილი — გადმოიწიე ან დააჭირე</span>
+                    <span class="file-name" id="course-upload-filename"></span>
+                    <input type="file" name="video_file" id="course-video-file" accept="video/*" required>
+                </label>
+                <button type="submit" class="btn-primary full-width">ატვირთვა</button>
+            </form>
+        </div>
+    </section>
+    {% endif %}
 
     <section id="discord" class="section join-section">
         <div class="join-card">
@@ -87,6 +114,49 @@ document.addEventListener("DOMContentLoaded", function() {
             line.style.transformOrigin = "0 0"; line.style.transform = "rotate(" + angle + "deg)";
             c.appendChild(line);
         }
+    }
+    var courseUploadForm = document.getElementById("course-upload-form");
+    var courseVideoFile = document.getElementById("course-video-file");
+    var courseUploadZone = document.getElementById("course-upload-zone");
+    var courseUploadFilename = document.getElementById("course-upload-filename");
+    if (courseVideoFile && courseUploadFilename) {
+        courseVideoFile.addEventListener("change", function() {
+            courseUploadFilename.textContent = this.files && this.files.length ? this.files[0].name : "";
+        });
+    }
+    if (courseUploadZone && courseVideoFile) {
+        courseUploadZone.addEventListener("click", function(e) { e.preventDefault(); courseVideoFile.click(); });
+    }
+    if (courseUploadForm && courseVideoFile) {
+        courseUploadForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            if (!courseVideoFile.files || !courseVideoFile.files.length) {
+                alert("გთხოვ აირჩიო ვიდეო ფაილი.");
+                return false;
+            }
+            var submitBtn = courseUploadForm.querySelector('button[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "იტვირთება..."; }
+            var redirectTo = "{{ url_for('course', pack_id=pack_id) }}";
+            fetch(courseUploadForm.action, {
+                method: "POST",
+                body: new FormData(courseUploadForm),
+                redirect: "follow",
+                credentials: "same-origin"
+            }).then(function(res) {
+                if (res.redirected && res.url) {
+                    window.location.href = res.url;
+                    return;
+                }
+                if (res.ok) {
+                    window.location.href = redirectTo;
+                    return;
+                }
+                return res.text().then(function() { alert("შეცდომა: " + res.status); });
+            }).catch(function() { alert("ატვირთვა ვერ მოხერხდა."); }).finally(function() {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "ატვირთვა"; }
+            });
+            return false;
+        });
     }
 });
 </script>

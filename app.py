@@ -283,7 +283,8 @@ def course(pack_id):
         flash("კურსზე წვდომისთვის საჭიროა ავტორიზაცია.", "error")
         return redirect(url_for("index"))
 
-    if not user_has_pack(user["id"], pack_id):
+    is_admin = session.get("is_admin")
+    if not is_admin and not user_has_pack(user["id"], pack_id):
         flash("ამ პაკეტზე წვდომა არ გაქვს. გთხოვ, ჯერ შეიძინე.", "error")
         return redirect(url_for("index"))
 
@@ -299,13 +300,15 @@ def course(pack_id):
     return render_template(
         "course.html",
         pack=PACKS[pack_id],
+        pack_id=pack_id,
         videos=videos,
         user=user,
+        is_admin=is_admin,
     )
 
 
-ADMIN_USERNAME = "ADMIN"
-ADMIN_PASSWORD = "yestour111"
+ADMIN_USERNAME = "admins"
+ADMIN_PASSWORD = "admins"
 
 
 def require_admin():

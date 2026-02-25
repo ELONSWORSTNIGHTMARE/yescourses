@@ -185,11 +185,43 @@ document.addEventListener("DOMContentLoaded", function() {
     var uploadForm = document.getElementById("admin-upload-form");
     if (uploadForm && videoFileInput) {
         uploadForm.addEventListener("submit", function(e) {
+            e.preventDefault();
             if (!videoFileInput.files || !videoFileInput.files.length) {
-                e.preventDefault();
                 alert("გთხოვ აირჩიო ვიდეო ფაილი.");
                 return false;
             }
+            var uploadUrl = uploadForm.action;
+            var submitBtn = uploadForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "იტვირთება...";
+            }
+            fetch(uploadUrl, {
+                method: "POST",
+                body: new FormData(uploadForm),
+                redirect: "follow",
+                credentials: "same-origin"
+            }).then(function(res) {
+                if (res.redirected && res.url) {
+                    window.location.href = res.url;
+                    return;
+                }
+                if (res.ok) {
+                    window.location.href = "/course/basic";
+                    return;
+                }
+                return res.text().then(function(t) {
+                    alert("შეცდომა: " + (res.status) + (t ? " - " + t.slice(0, 100) : ""));
+                });
+            }).catch(function(err) {
+                alert("ატვირთვა ვერ მოხერხდა.");
+            }).finally(function() {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "ვიდეოს ატვირთვა";
+                }
+            });
+            return false;
         });
     }
 });
