@@ -51,7 +51,7 @@
     <section class="section">
         <div class="admin-card">
             <h3 class="section-title">ადმინი: ვიდეოს ატვირთვა ამ კურსზე</h3>
-            <form id="course-upload-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data">
+            <form id="course-upload-form" class="auth-form" action="{{ url_for('course_upload_video', pack_id=pack_id) }}" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="pack_id" value="{{ pack_id }}">
                 <label>სათაური
                     <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1">

@@ -232,6 +232,8 @@ def login():
         return redirect(request.referrer or url_for("index"))
 
     session["user_id"] = user["id"]
+    if user["email"] == "matebedeladze@gmail.com":
+        session["is_admin"] = True
     flash("შესვლა წარმატებულია!", "success")
     return redirect(request.referrer or url_for("index"))
 
@@ -283,7 +285,7 @@ def course(pack_id):
         flash("კურსზე წვდომისთვის საჭიროა ავტორიზაცია.", "error")
         return redirect(url_for("index"))
 
-    is_admin = session.get("is_admin")
+    is_admin = session.get("is_admin") or (user and user.get("email") == ADMIN_EMAIL)
     if not is_admin and not user_has_pack(user["id"], pack_id):
         flash("ამ პაკეტზე წვდომა არ გაქვს. გთხოვ, ჯერ შეიძინე.", "error")
         return redirect(url_for("index"))
@@ -307,12 +309,90 @@ def course(pack_id):
     )
 
 
+@app.route("/course/<pack_id>/upload", methods=["POST"])
+def course_upload_video(pack_id):
+    if pack_id not in PACKS:
+        flash("ასეთი პაკეტი არ არსებობს.", "error")
+        return redirect(url_for("index"))
+    user = get_current_user()
+    if not user:
+        flash("შესვლა საჭიროა.", "error")
+        return redirect(url_for("index"))
+    if not is_admin_user():
+        flash("მხოლოდ ადმინს შეუძლია ვიდეოს ატვირთვა.", "error")
+        return redirect(url_for("course", pack_id=pack_id))
+
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    order_index = request.form.get("order_index", "1")
+    file = request.files.get("video_file")
+
+    if not title:
+        flash("სათაური სავალდებულოა.", "error")
+        return redirect(url_for("course", pack_id=pack_id))
+    if not file or not getattr(file, "filename", None) or not (file.filename or "").strip():
+        flash("გთხოვ აირჩიო ვიდეო ფაილი.", "error")
+        return redirect(url_for("course", pack_id=pack_id))
+
+    try:
+        order_index = int(order_index)
+    except (ValueError, TypeError):
+        order_index = 1
+
+    base_name = secure_filename(file.filename)
+    if not base_name:
+        base_name = "video"
+    name, ext = os.path.splitext(base_name)
+    if not ext or ext.lower() not in (".mp4", ".webm", ".mov", ".avi", ".mkv", ".m4v"):
+        ext = ".mp4"
+    filename = f"{name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}{ext}"
+
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    try:
+        file.save(save_path)
+    except Exception:
+        flash("ვიდეოს შენახვა ვერ მოხერხდა.", "error")
+        return redirect(url_for("course", pack_id=pack_id))
+
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO videos (pack_id, title, description, filename, order_index, uploaded_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (pack_id, title, description, filename, order_index, datetime.utcnow().isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        if os.path.exists(save_path):
+            try:
+                os.remove(save_path)
+            except OSError:
+                pass
+        flash("ბაზაში ჩაწერა ვერ მოხერხდა.", "error")
+        return redirect(url_for("course", pack_id=pack_id))
+
+    flash("ვიდეო წარმატებით აიტვირთა.", "success")
+    return redirect(url_for("course", pack_id=pack_id))
+
+
 ADMIN_USERNAME = "admins"
 ADMIN_PASSWORD = "admins"
+ADMIN_EMAIL = "matebedeladze@gmail.com"
+
+
+def is_admin_user():
+    if session.get("is_admin"):
+        return True
+    user = get_current_user()
+    return user and user.get("email") == ADMIN_EMAIL
 
 
 def require_admin():
-    if not session.get("is_admin"):
+    if not is_admin_user():
         flash("ადმინისტრატორის წვდომა შეზღუდულია.", "error")
         return False
     return True
@@ -377,8 +457,6 @@ def admin_upload_video_page():
 @app.route("/admin/upload_video", methods=["GET", "POST"])
 def admin_upload_video():
     if request.method == "GET":
-        return redirect(url_for("admin_upload_video_page"))
-    if not require_admin():
         return redirect(url_for("admin_page"))
     if not require_admin():
         return redirect(url_for("admin_page"))
