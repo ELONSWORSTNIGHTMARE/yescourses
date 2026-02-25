@@ -36,19 +36,24 @@ PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
 @app.route("/styles.css")
 def serve_css():
-    for directory in (PUBLIC_DIR, BASE_DIR):
+    # Prefer project root (BASE_DIR) so main site CSS works everywhere
+    for directory in (BASE_DIR, PUBLIC_DIR):
         path = os.path.join(directory, "styles.css")
         if os.path.isfile(path):
-            return send_from_directory(directory, "styles.css", mimetype="text/css")
+            r = send_from_directory(directory, "styles.css", mimetype="text/css")
+            r.headers["Cache-Control"] = "public, max-age=300"
+            return r
     return "/* CSS not found */", 404, {"Content-Type": "text/css"}
 
 
 @app.route("/main.js")
 def serve_js():
-    for directory in (PUBLIC_DIR, BASE_DIR):
+    for directory in (BASE_DIR, PUBLIC_DIR):
         path = os.path.join(directory, "main.js")
         if os.path.isfile(path):
-            return send_from_directory(directory, "main.js", mimetype="application/javascript")
+            r = send_from_directory(directory, "main.js", mimetype="application/javascript")
+            r.headers["Cache-Control"] = "public, max-age=300"
+            return r
     return "// JS not found", 404, {"Content-Type": "application/javascript"}
 
 
