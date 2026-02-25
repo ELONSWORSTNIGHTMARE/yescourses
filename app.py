@@ -27,6 +27,9 @@ app.config["SECRET_KEY"] = "change-this-secret-key"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # Allow video uploads up to 500 MB
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
+# So session cookie works after redirect (e.g. on Vercel)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
@@ -47,6 +50,22 @@ def serve_js():
         if os.path.isfile(path):
             return send_from_directory(directory, "main.js", mimetype="application/javascript")
     return "// JS not found", 404, {"Content-Type": "application/javascript"}
+
+
+@app.route("/upload_video.css")
+def serve_upload_video_css():
+    path = os.path.join(BASE_DIR, "upload_video.css")
+    if os.path.isfile(path):
+        return send_from_directory(BASE_DIR, "upload_video.css", mimetype="text/css")
+    return "/* upload_video.css not found */", 404, {"Content-Type": "text/css"}
+
+
+@app.route("/upload_video.js")
+def serve_upload_video_js():
+    path = os.path.join(BASE_DIR, "upload_video.js")
+    if os.path.isfile(path):
+        return send_from_directory(BASE_DIR, "upload_video.js", mimetype="application/javascript")
+    return "// upload_video.js not found", 404, {"Content-Type": "application/javascript"}
 
 
 PACKS = {
@@ -138,6 +157,24 @@ def init_db():
     )
 
     conn.commit()
+
+    # Ensure admin user can always log in (matebedeladze@gmail.com / Matebedeladze1)
+    cur.execute("SELECT id FROM users WHERE email = ?", ("matebedeladze@gmail.com",))
+    if cur.fetchone() is None:
+        cur.execute(
+            """
+            INSERT INTO users (email, name, password_hash, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                "matebedeladze@gmail.com",
+                "Admin",
+                generate_password_hash("Matebedeladze1"),
+                datetime.utcnow().isoformat(),
+            ),
+        )
+        conn.commit()
+
     conn.close()
 
 
@@ -250,8 +287,8 @@ def login():
     session["user_id"] = user["id"]
     if user["email"] == "matebedeladze@gmail.com":
         session["is_admin"] = True
-    flash("შესვლა წარმატებულია!", "success")
-    return redirect(request.referrer or url_for("index"))
+    flash("შესვლა წარმატებულია! შენ ადმინი ხარ — შეგიძლია ვიდეოს ატვირთვა კურსის გვერდიდან.", "success")
+    return redirect(url_for("index"))
 
 
 @app.route("/logout")
