@@ -109,11 +109,6 @@ def init_db():
     conn.close()
 
 
-@app.before_first_request
-def setup():
-    init_db()
-
-
 def get_current_user():
     user_id = session.get("user_id")
     if not user_id:
@@ -138,10 +133,24 @@ def user_has_pack(user_id, pack_id):
     return row is not None
 
 
+def get_user_purchased_pack_ids(user_id):
+    if not user_id:
+        return set()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT pack_id FROM purchases WHERE user_id = ?", (user_id,))
+    ids = {row["pack_id"] for row in cur.fetchall()}
+    conn.close()
+    return ids
+
+
 @app.route("/")
 def index():
     user = get_current_user()
-    return render_template("index.html", packs=PACKS, user=user)
+    purchased = get_user_purchased_pack_ids(user["id"] if user else None)
+    return render_template(
+        "index.html", packs=PACKS, user=user, purchased_pack_ids=purchased
+    )
 
 
 @app.route("/register", methods=["POST"])
@@ -268,23 +277,8 @@ def course(pack_id):
     )
 
 
-@app.route("/admin", methods=["GET", "POST"])
-def admin_login():
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-
-        if username == "yestour" and password == "yestour111":
-            session["is_admin"] = True
-            return redirect(url_for("admin_dashboard"))
-        else:
-            flash("არასწორი ადმინისტრატორის მონაცემები.", "error")
-            return redirect(url_for("admin_login"))
-
-    if session.get("is_admin"):
-        return redirect(url_for("admin_dashboard"))
-
-    return render_template("admin_login.html")
+ADMIN_USERNAME = "ADMIN"
+ADMIN_PASSWORD = "yestour111"
 
 
 def require_admin():
@@ -294,11 +288,7 @@ def require_admin():
     return True
 
 
-@app.route("/admin/dashboard")
-def admin_dashboard():
-    if not require_admin():
-        return redirect(url_for("admin_login"))
-
+def get_admin_data():
     conn = get_db()
     cur = conn.cursor()
     stats = {}
@@ -306,22 +296,44 @@ def admin_dashboard():
         cur.execute("SELECT COUNT(*) AS c FROM purchases WHERE pack_id = ?", (pid,))
         row = cur.fetchone()
         stats[pid] = row["c"] if row else 0
-
     cur.execute(
         "SELECT * FROM videos ORDER BY pack_id ASC, order_index ASC, uploaded_at ASC"
     )
     videos = cur.fetchall()
     conn.close()
+    return {"stats": stats, "videos": videos}
 
-    return render_template(
-        "admin_dashboard.html", packs=PACKS, stats=stats, videos=videos
-    )
+
+@app.route("/admin", methods=["GET", "POST"])
+def admin_page():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session["is_admin"] = True
+            return redirect(url_for("admin_page"))
+
+        flash("არასწორი მომხმარებელი ან პაროლი.", "error")
+        return redirect(url_for("admin_page"))
+
+    if session.get("is_admin"):
+        data = get_admin_data()
+        return render_template(
+            "admin.html",
+            packs=PACKS,
+            stats=data["stats"],
+            videos=data["videos"],
+            show_dashboard=True,
+        )
+
+    return render_template("admin.html", show_dashboard=False)
 
 
 @app.route("/admin/upload_video", methods=["POST"])
 def admin_upload_video():
     if not require_admin():
-        return redirect(url_for("admin_login"))
+        return redirect(url_for("admin_page"))
 
     pack_id = request.form.get("pack_id")
     title = request.form.get("title", "").strip()
@@ -331,11 +343,11 @@ def admin_upload_video():
 
     if pack_id not in PACKS:
         flash("არასწორი პაკეტი.", "error")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("admin_page"))
 
-    if not title or not file:
+    if not title or not file or file.filename == "":
         flash("სათაური და ვიდეო სავალდებულოა.", "error")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("admin_page"))
 
     try:
         order_index = int(order_index)
@@ -345,7 +357,7 @@ def admin_upload_video():
     filename = secure_filename(file.filename)
     if not filename:
         flash("არასწორი ფაილი.", "error")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("admin_page"))
 
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     file.save(save_path)
@@ -363,13 +375,13 @@ def admin_upload_video():
     conn.close()
 
     flash("ვიდეო წარმატებით აიტვირთა.", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_page"))
 
 
 @app.route("/admin/delete_video/<int:video_id>", methods=["POST"])
 def admin_delete_video(video_id):
     if not require_admin():
-        return redirect(url_for("admin_login"))
+        return redirect(url_for("admin_page"))
 
     conn = get_db()
     cur = conn.cursor()
@@ -384,7 +396,13 @@ def admin_delete_video(video_id):
     conn.close()
 
     flash("ვიდეო წაიშალა.", "info")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_page"))
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    return redirect(url_for("admin_page"))
 
 
 @app.route("/uploads/<path:filename>")
@@ -393,5 +411,6 @@ def uploaded_file(filename):
 
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)
 

@@ -2,7 +2,7 @@
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>Yescourses · Course</title>
+    <title>Yescourses · კურსი</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,18 +14,21 @@
 <header class="main-header">
     <div class="logo">yescourses</div>
     <nav class="main-nav">
-        <a href="index.html#features">ფუნქციები</a>
+        <a href="index.html">მთავარი</a>
+        <a href="index.html#pricing">პაკეტები</a>
         <a href="#discord">Discord</a>
     </nav>
 </header>
 
 <main>
-    <section class="section">
+    <section class="section course-hero">
         <h2 class="section-title">შენი კურსის სივრცე</h2>
         <p class="section-subtitle">
             აქ გამოჩნდება შენთვის ხელმისაწვდომი ვიდეო გაკვეთილები და მასალები, როგორც კი პაკეტს შეიძენ.
         </p>
+    </section>
 
+    <section class="section">
         <div class="videos-list">
             <article class="video-card">
                 <div class="video-header">
@@ -35,8 +38,8 @@
                 <p class="video-description">
                     დემო ადგილი პირველი ვიდეოსთვის. რეალური პროექტში აქ დაინახავ ატვირთულ ვიდეოს.
                 </p>
-                <div class="video-player" style="display:flex;align-items:center;justify-content:center;padding:1.2rem;color:#9ca3af;">
-                    ვიდეოს ადგილი (დემო)
+                <div class="video-player-placeholder">
+                    <span>ვიდეოს ადგილი (დემო)</span>
                 </div>
             </article>
         </div>
@@ -60,47 +63,39 @@
 </footer>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const circlesContainer = document.getElementById("circles-container");
+document.addEventListener("DOMContentLoaded", function() {
+    var circlesContainer = document.getElementById("circles-container");
     if (circlesContainer) {
-        const dots = [];
-        const dotCount = 18;
-        for (let i = 0; i < dotCount; i++) {
-            const dot = document.createElement("div");
+        var dots = [];
+        var dotCount = 18;
+        for (var i = 0; i < dotCount; i++) {
+            var dot = document.createElement("div");
             dot.className = "circle";
-            const duration = 22 + Math.random() * 16;
-            const delay = Math.random() * -duration;
-            const left = Math.random() * 100;
-            const top = Math.random() * 100;
-            dot.style.left = `${left}%`;
-            dot.style.top = `${top}%`;
-            dot.style.animationDuration = `${duration}s`;
-            dot.style.animationDelay = `${delay}s`;
+            var duration = 22 + Math.random() * 16;
+            var delay = Math.random() * -duration;
+            var left = Math.random() * 100;
+            var top = Math.random() * 100;
+            dot.style.left = left + "%";
+            dot.style.top = top + "%";
+            dot.style.animationDuration = duration + "s";
+            dot.style.animationDelay = delay + "s";
             circlesContainer.appendChild(dot);
-            dots.push({ el: dot, left, top });
+            dots.push({ left: left, top: top });
         }
-
-        for (let i = 1; i < dots.length; i++) {
-            const a = dots[i - 1];
-            const b = dots[i];
-            const line = document.createElement("div");
+        for (var j = 1; j < dots.length; j++) {
+            var a = dots[j - 1];
+            var b = dots[j];
+            var line = document.createElement("div");
             line.className = "circle-line";
-
-            const x1 = a.left;
-            const y1 = a.top;
-            const x2 = b.left;
-            const y2 = b.top;
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-            line.style.width = `${length}vw`;
-            line.style.left = `${x1}%`;
-            line.style.top = `${y1}%`;
+            var dx = b.left - a.left;
+            var dy = b.top - a.top;
+            var length = Math.sqrt(dx * dx + dy * dy);
+            var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            line.style.width = length + "vw";
+            line.style.left = a.left + "%";
+            line.style.top = a.top + "%";
             line.style.transformOrigin = "0 0";
-            line.style.transform = `rotate(${angle}deg)`;
-
+            line.style.transform = "rotate(" + angle + "deg)";
             circlesContainer.appendChild(line);
         }
     }
@@ -108,36 +103,3 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
-
-{% extends "base.html" %}
-{% block content %}
-<section class="section">
-    <h2 class="section-title">{{ pack.name }} · ვიდეო კურსი</h2>
-    <p class="section-subtitle">
-        აქ იხილავ ყველა გაკვეთილს, რომელიც ხელმისაწვდომია შენთვის შეძენილი პაკეტით.
-    </p>
-
-    {% if videos %}
-        <div class="videos-list">
-            {% for v in videos %}
-                <article class="video-card">
-                    <div class="video-header">
-                        <span class="video-order">#{{ v['order_index'] }}</span>
-                        <h3 class="video-title">{{ v['title'] }}</h3>
-                    </div>
-                    {% if v['description'] %}
-                        <p class="video-description">{{ v['description'] }}</p>
-                    {% endif %}
-                    <video class="video-player" controls preload="metadata">
-                        <source src="{{ url_for('uploaded_file', filename=v['filename']) }}" type="video/mp4">
-                        შენი ბრაუზერი ვერ აჩვენებს ამ ვიდეოს.
-                    </video>
-                </article>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>ამ პაკეტისთვის ვიდეოები ჯერ არ არის ატვირთული. დაბრუნდი ცოტა მოგვიანებით.</p>
-    {% endif %}
-</section>
-{% endblock %}
-

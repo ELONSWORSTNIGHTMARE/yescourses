@@ -11,121 +11,227 @@
     <div id="circles-container"></div>
 </div>
 
-<header class="main-header">
-    <div class="logo">yescourses</div>
-    <nav class="main-nav">
-        <a href="index.html">მთავარი</a>
-        <span class="user-name">Admin panel</span>
-    </nav>
-</header>
-
-<main>
+<!-- Login gate: shown when not authenticated -->
+<div id="admin-gate" class="admin-gate">
+    <header class="main-header" style="position: relative;">
+        <div class="logo">yescourses</div>
+        <nav class="main-nav">
+            <a href="index.html">მთავარი</a>
+        </nav>
+    </header>
     <section class="section">
-        <h2 class="section-title">ადმინისტრატორის პანელი</h2>
-        <p class="section-subtitle">გაყიდვები და ვიდეოების მართვა. (ამ ეტაპზე მონაცემები 0-ია, სანამ რეალურ გადახდებს არ მივაბამთ)</p>
-
-        <div class="admin-grid">
-            <div class="admin-card">
-                <h3>გაყიდვების სტატისტიკა</h3>
-                <ul class="stats-list">
-                    <li>
-                        <span>საწყისი პაკეტი</span>
-                        <span class="stat-count">0 გაყიდვა</span>
-                    </li>
-                    <li>
-                        <span>სრული მენტორშიპი</span>
-                        <span class="stat-count">0 გაყიდვა</span>
-                    </li>
-                    <li>
-                        <span>1-1 Mentorship</span>
-                        <span class="stat-count">0 გაყიდვა</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="admin-card">
-                <h3>ახალი ვიდეოს ატვირთვა (მხოლოდ საწყისი პაკეტი)</h3>
-                <form class="auth-form">
-                    <label>რომელი პაკეტი?
-                        <select name="pack_id" required>
-                            <option>საწყისი პაკეტი</option>
-                        </select>
-                    </label>
-                    <label>სათაური
-                        <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1 - დასაწყისი">
-                    </label>
-                    <label>აღწერა
-                        <textarea name="description" rows="3" placeholder="კერძო ინფორმაცია ამ გაკვეთილზე"></textarea>
-                    </label>
-                    <label>კატეგორია / რიგითობა (1 = პირველი ვიდეო)
-                        <input type="number" name="order_index" value="1" min="1">
-                    </label>
-                    <label>ვიდეო ფაილი (mp4 რეკომენდირებულია)
-                        <input type="file" name="video_file" accept="video/*" required>
-                    </label>
-                    <button type="button" class="btn-primary full-width">ვიდეოს ატვირთვა (დემო)</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="admin-card">
-            <h3>არსებული ვიდეოები</h3>
-            <p style="color:#9ca3af;">ვიდეოები ჯერ არ არის ატვირთული. როდესაც რეალურ backend-ს მივაბამთ, აქ გამოჩნდება სია.</p>
+        <h2 class="section-title">ადმინისტრატორის შესვლა</h2>
+        <p class="section-subtitle">მხოლოდ შიდა გუნდისთვის.</p>
+        <div class="centered-card">
+            <form class="auth-form" id="admin-login-form">
+                <label>მომხმარებელი
+                    <input type="text" name="username" required autocomplete="username">
+                </label>
+                <label>პაროლი
+                    <input type="password" name="password" required autocomplete="current-password">
+                </label>
+                <p id="admin-gate-error" class="auth-message error" style="display: none; margin-bottom: 0.75rem;"></p>
+                <button type="submit" class="btn-primary full-width">შესვლა</button>
+            </form>
         </div>
     </section>
-</main>
+</div>
 
-<footer class="main-footer">
-    <p>© 2026 Yescourses · Admin</p>
-</footer>
+<!-- Dashboard: shown when authenticated -->
+<div id="admin-panel" class="admin-panel-hidden">
+    <header class="main-header">
+        <div class="logo">yescourses</div>
+        <nav class="main-nav">
+            <a href="index.html">მთავარი</a>
+            <span class="user-name">Admin panel</span>
+            <a href="#" id="admin-logout" class="btn-secondary">გამოსვლა</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="section">
+            <h2 class="section-title">ადმინისტრატორის პანელი</h2>
+            <p class="section-subtitle">გაყიდვები და ვიდეოების მართვა.</p>
+
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <h3>გაყიდვების სტატისტიკა</h3>
+                    <ul class="stats-list">
+                        <li>
+                            <span>საწყისი პაკეტი</span>
+                            <span class="stat-count">0 გაყიდვა</span>
+                        </li>
+                        <li>
+                            <span>სრული მენტორშიპი</span>
+                            <span class="stat-count">0 გაყიდვა</span>
+                        </li>
+                        <li>
+                            <span>1-1 Mentorship</span>
+                            <span class="stat-count">0 გაყიდვა</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="admin-card">
+                    <h3>ახალი ვიდეოს ატვირთვა (მხოლოდ საწყისი პაკეტი)</h3>
+                    <form class="auth-form" id="admin-upload-form" action="/admin/upload_video" method="post" enctype="multipart/form-data">
+                        <label>რომელი პაკეტი?
+                            <select name="pack_id" required>
+                                <option value="basic">საწყისი პაკეტი</option>
+                            </select>
+                        </label>
+                        <label>სათაური
+                            <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1 - დასაწყისი">
+                        </label>
+                        <label>აღწერა
+                            <textarea name="description" rows="3" placeholder="კერძო ინფორმაცია ამ გაკვეთილზე"></textarea>
+                        </label>
+                        <label>კატეგორია / რიგითობა (1 = პირველი ვიდეო)
+                            <input type="number" name="order_index" value="1" min="1">
+                        </label>
+                        <label class="upload-zone" id="upload-zone">
+                            <span class="upload-label">ვიდეო ფაილი — გადმოიწიე აქ ან დააჭირე არჩევას</span>
+                            <span class="upload-hint">MP4 ან სხვა ვიდეო ფორმატი</span>
+                            <span class="file-name" id="upload-file-name"></span>
+                            <input type="file" name="video_file" id="video_file_input" accept="video/*" required>
+                        </label>
+                        <button type="submit" class="btn-primary full-width">ვიდეოს ატვირთვა</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h3>არსებული ვიდეოები</h3>
+                <p style="color:#9ca3af;">ვიდეოები ჯერ არ არის ატვირთული. როდესაც რეალურ backend-ს მივაბამთ, აქ გამოჩნდება სია.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <p>© 2026 Yescourses · Admin</p>
+    </footer>
+</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const circlesContainer = document.getElementById("circles-container");
+(function() {
+    var isAdmin = sessionStorage.getItem("yc_admin") === "1";
+    var gate = document.getElementById("admin-gate");
+    var panel = document.getElementById("admin-panel");
+    if (isAdmin) {
+        if (gate) gate.classList.add("admin-panel-hidden");
+        if (panel) panel.classList.remove("admin-panel-hidden");
+    } else {
+        if (gate) gate.classList.remove("admin-panel-hidden");
+        if (panel) panel.classList.add("admin-panel-hidden");
+    }
+})();
+
+document.addEventListener("DOMContentLoaded", function() {
+    var isAdmin = sessionStorage.getItem("yc_admin") === "1";
+
+    var circlesContainer = document.getElementById("circles-container");
     if (circlesContainer) {
-        const dots = [];
-        const dotCount = 16;
-        for (let i = 0; i < dotCount; i++) {
-            const dot = document.createElement("div");
+        var dots = [];
+        var dotCount = 16;
+        for (var i = 0; i < dotCount; i++) {
+            var dot = document.createElement("div");
             dot.className = "circle";
-            const duration = 22 + Math.random() * 16;
-            const delay = Math.random() * -duration;
-            const left = Math.random() * 100;
-            const top = Math.random() * 100;
-            dot.style.left = `${left}%`;
-            dot.style.top = `${top}%`;
-            dot.style.animationDuration = `${duration}s`;
-            dot.style.animationDelay = `${delay}s`;
+            var duration = 22 + Math.random() * 16;
+            var delay = Math.random() * -duration;
+            var left = Math.random() * 100;
+            var top = Math.random() * 100;
+            dot.style.left = left + "%";
+            dot.style.top = top + "%";
+            dot.style.animationDuration = duration + "s";
+            dot.style.animationDelay = delay + "s";
             circlesContainer.appendChild(dot);
-            dots.push({ el: dot, left, top });
+            dots.push({ left: left, top: top });
         }
-
-        for (let i = 1; i < dots.length; i++) {
-            const a = dots[i - 1];
-            const b = dots[i];
-            const line = document.createElement("div");
+        for (var j = 1; j < dots.length; j++) {
+            var a = dots[j - 1];
+            var b = dots[j];
+            var line = document.createElement("div");
             line.className = "circle-line";
-
-            const x1 = a.left;
-            const y1 = a.top;
-            const x2 = b.left;
-            const y2 = b.top;
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-            line.style.width = `${length}vw`;
-            line.style.left = `${x1}%`;
-            line.style.top = `${y1}%`;
+            var dx = b.left - a.left;
+            var dy = b.top - a.top;
+            var length = Math.sqrt(dx * dx + dy * dy);
+            var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            line.style.width = length + "vw";
+            line.style.left = a.left + "%";
+            line.style.top = a.top + "%";
             line.style.transformOrigin = "0 0";
-            line.style.transform = `rotate(${angle}deg)`;
-
+            line.style.transform = "rotate(" + angle + "deg)";
             circlesContainer.appendChild(line);
         }
+    }
+
+    var loginForm = document.getElementById("admin-login-form");
+    if (loginForm) {
+        loginForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            var username = loginForm.username.value.trim();
+            var password = loginForm.password.value.trim();
+            var errEl = document.getElementById("admin-gate-error");
+            if (username === "ADMIN" && password === "yestour111") {
+                sessionStorage.setItem("yc_admin", "1");
+                window.location.reload();
+            } else {
+                if (errEl) {
+                    errEl.textContent = "არასწორი მომხმარებელი ან პაროლი.";
+                    errEl.style.display = "block";
+                }
+            }
+        });
+    }
+
+    var logoutBtn = document.getElementById("admin-logout");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", function(e) {
+            e.preventDefault();
+            sessionStorage.removeItem("yc_admin");
+            window.location.reload();
+        });
+    }
+
+    var uploadZone = document.getElementById("upload-zone");
+    var videoFileInput = document.getElementById("video_file_input");
+    var uploadFileName = document.getElementById("upload-file-name");
+    if (uploadZone && videoFileInput) {
+        uploadZone.addEventListener("click", function() { videoFileInput.click(); });
+        uploadZone.addEventListener("dragover", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.classList.add("drag-over");
+        });
+        uploadZone.addEventListener("dragleave", function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove("drag-over");
+        });
+        uploadZone.addEventListener("drop", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.classList.remove("drag-over");
+            var files = e.dataTransfer.files;
+            if (files.length) {
+                videoFileInput.files = files;
+                if (uploadFileName) uploadFileName.textContent = files[0].name;
+            }
+        });
+        videoFileInput.addEventListener("change", function() {
+            if (uploadFileName) uploadFileName.textContent = this.files.length ? this.files[0].name : "";
+        });
+    }
+
+    var uploadForm = document.getElementById("admin-upload-form");
+    if (uploadForm) {
+        uploadForm.addEventListener("submit", function(e) {
+            if (!videoFileInput || !videoFileInput.files || !videoFileInput.files.length) {
+                e.preventDefault();
+                alert("გთხოვ აირჩიო ვიდეო ფაილი.");
+            }
+        });
     }
 });
 </script>
 </body>
 </html>
-

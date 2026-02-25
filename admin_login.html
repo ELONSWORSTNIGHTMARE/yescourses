@@ -2,104 +2,11 @@
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>Yescourses · Admin Login</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
+    <title>Redirecting...</title>
+    <meta http-equiv="refresh" content="0; url=admin.html">
+    <script>window.location.replace("admin.html");</script>
 </head>
 <body>
-<div class="background">
-    <div id="circles-container"></div>
-</div>
-
-<header class="main-header">
-    <div class="logo">yescourses</div>
-    <nav class="main-nav">
-        <a href="index.html">მთავარი</a>
-    </nav>
-</header>
-
-<main>
-    <section class="section">
-        <h2 class="section-title">ადმინისტრატორის შესვლა</h2>
-        <p class="section-subtitle">მხოლოდ შიდა გუნდისთვის.</p>
-        <div class="centered-card">
-            <form class="auth-form" id="admin-login-form">
-                <label>მომხმარებელი
-                    <input type="text" name="username" required>
-                </label>
-                <label>პაროლი
-                    <input type="password" name="password" required>
-                </label>
-                <button type="submit" class="btn-primary full-width">შესვლა</button>
-            </form>
-        </div>
-    </section>
-</main>
-
-<footer class="main-footer">
-    <p>© 2026 Yescourses · Admin</p>
-</footer>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const circlesContainer = document.getElementById("circles-container");
-    if (circlesContainer) {
-        const dots = [];
-        const dotCount = 14;
-        for (let i = 0; i < dotCount; i++) {
-            const dot = document.createElement("div");
-            dot.className = "circle";
-            const duration = 22 + Math.random() * 16;
-            const delay = Math.random() * -duration;
-            const left = Math.random() * 100;
-            const top = Math.random() * 100;
-            dot.style.left = `${left}%`;
-            dot.style.top = `${top}%`;
-            dot.style.animationDuration = `${duration}s`;
-            dot.style.animationDelay = `${delay}s`;
-            circlesContainer.appendChild(dot);
-            dots.push({ el: dot, left, top });
-        }
-
-        for (let i = 1; i < dots.length; i++) {
-            const a = dots[i - 1];
-            const b = dots[i];
-            const line = document.createElement("div");
-            line.className = "circle-line";
-
-            const x1 = a.left;
-            const y1 = a.top;
-            const x2 = b.left;
-            const y2 = b.top;
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-            line.style.width = `${length}vw`;
-            line.style.left = `${x1}%`;
-            line.style.top = `${y1}%`;
-            line.style.transformOrigin = "0 0";
-            line.style.transform = `rotate(${angle}deg)`;
-
-            circlesContainer.appendChild(line);
-        }
-    }
-
-    const form = document.getElementById("admin-login-form");
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const username = form.username.value.trim();
-        const password = form.password.value.trim();
-
-        if (username === "yestour" && password === "yestour111") {
-            window.location.href = "admin_dashboard.html";
-        } else {
-            alert("არასწორი ადმინისტრატორის მონაცემები.");
-        }
-    });
-});
-</script>
+<p>გადამისამართება… <a href="admin.html">admin</a></p>
 </body>
 </html>
-
