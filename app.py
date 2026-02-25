@@ -8,8 +8,14 @@ from datetime import datetime
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+# On Vercel, filesystem is read-only except /tmp
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+if IS_VERCEL:
+    DB_PATH = "/tmp/yescourses_data.db"
+    UPLOAD_FOLDER = "/tmp/yescourses_uploads"
+else:
+    DB_PATH = os.path.join(BASE_DIR, "data.db")
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -145,6 +151,17 @@ def get_user_purchased_pack_ids(user_id):
     ids = {row["pack_id"] for row in cur.fetchall()}
     conn.close()
     return ids
+
+
+@app.route("/admin.html")
+@app.route("/admin_login.html")
+def redirect_old_admin():
+    return redirect(url_for("admin_page"))
+
+
+@app.route("/course.html")
+def redirect_old_course():
+    return redirect(url_for("index"))
 
 
 @app.route("/")
@@ -442,7 +459,9 @@ def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
+# Ensure DB exists when app is loaded (e.g. on Vercel serverless)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
 
