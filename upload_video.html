@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Yescourses · ვიდეოს ატვირთვა{% endblock %}
+{% block body %}
+<header class="main-header">
+    <div class="logo">yescourses</div>
+    <nav class="main-nav">
+        <a href="{{ url_for('admin_page') }}">← ადმინ პანელი</a>
+        <a href="{{ url_for('course', pack_id='basic') }}" class="btn-outline">კურსის გვერდი</a>
+    </nav>
+</header>
+
+<main>
+    <section class="section">
+        <h2 class="section-title">ვიდეოს ატვირთვა</h2>
+        <p class="section-subtitle">აირჩიე ფაილი და დააჭირე „ატვირთვა“ — ვიდეო გამოჩნდება კურსის გვერდზე.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="auth-message {{ messages[0][0] or '' }}" style="max-width:28rem;margin-bottom:1rem;">{{ messages[0][1] }}</div>
+        {% endif %}
+        {% endwith %}
+        <div class="admin-card" style="max-width: 28rem;">
+            <form id="upload-video-form" class="auth-form" action="{{ url_for('admin_upload_video') }}" method="post" enctype="multipart/form-data">
+                <label>პაკეტი
+                    <select name="pack_id" required>
+                        {% for pid, pack in packs.items() %}
+                        <option value="{{ pid }}">{{ pack.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>სათაური
+                    <input type="text" name="title" required placeholder="მაგ: გაკვეთილი 1">
+                </label>
+                <label>აღწერა
+                    <textarea name="description" rows="2" placeholder="არასავალდებულო"></textarea>
+                </label>
+                <label>რიგითობა
+                    <input type="number" name="order_index" value="1" min="1">
+                </label>
+                <label class="upload-zone" id="upload-zone">
+                    <span class="upload-label">ვიდეო ფაილი — გადმოიწიე ან დააჭირე</span>
+                    <span class="upload-hint">MP4, WebM, MOV (მაქს. 500 MB)</span>
+                    <span class="file-name" id="upload-file-name"></span>
+                    <input type="file" name="video_file" id="video_file_input" accept="video/*" required>
+                </label>
+                <button type="submit" class="btn-primary full-width">ატვირთვა — გადაგიყვანს კურსის გვერდზე</button>
+            </form>
+        </div>
+    </section>
+</main>
+
+<footer class="main-footer">
+    <p>© 2026 Yescourses · Admin</p>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var c = document.getElementById("circles-container");
+    if (c) {
+        var dots = [], n = 12;
+        for (var i = 0; i < n; i++) {
+            var d = document.createElement("div"); d.className = "circle";
+            var dur = 22 + Math.random() * 16, del = Math.random() * -dur;
+            var left = Math.random() * 100, top = Math.random() * 100;
+            d.style.left = left + "%"; d.style.top = top + "%";
+            d.style.animationDuration = dur + "s"; d.style.animationDelay = del + "s";
+            c.appendChild(d); dots.push({ left: left, top: top });
+        }
+        for (var j = 1; j < dots.length; j++) {
+            var a = dots[j-1], b = dots[j];
+            var line = document.createElement("div"); line.className = "circle-line";
+            var dx = b.left - a.left, dy = b.top - a.top;
+            var len = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx)*180/Math.PI;
+            line.style.width = len + "vw"; line.style.left = a.left + "%"; line.style.top = a.top + "%";
+            line.style.transformOrigin = "0 0"; line.style.transform = "rotate(" + angle + "deg)";
+            c.appendChild(line);
+        }
+    }
+    var form = document.getElementById("upload-video-form");
+    var videoInput = document.getElementById("video_file_input");
+    var fileNameEl = document.getElementById("upload-file-name");
+    var uploadZone = document.getElementById("upload-zone");
+    if (videoInput && fileNameEl) {
+        videoInput.addEventListener("change", function() {
+            fileNameEl.textContent = this.files && this.files.length ? this.files[0].name : "";
+        });
+    }
+    if (uploadZone && videoInput) {
+        uploadZone.addEventListener("click", function(e) { e.preventDefault(); videoInput.click(); });
+    }
+    if (form && videoInput) {
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            if (!videoInput.files || !videoInput.files.length) {
+                alert("გთხოვ აირჩიო ვიდეო ფაილი.");
+                return false;
+            }
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = "იტვირთება..."; }
+            fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                redirect: "follow",
+                credentials: "same-origin"
+            }).then(function(res) {
+                if (res.redirected && res.url) {
+                    window.location.href = res.url;
+                    return;
+                }
+                if (res.ok) {
+                    window.location.href = "/course/basic";
+                    return;
+                }
+                return res.text().then(function() { alert("შეცდომა: " + res.status); });
+            }).catch(function() { alert("ატვირთვა ვერ მოხერხდა."); }).finally(function() {
+                if (btn) { btn.disabled = false; btn.textContent = "ატვირთვა — გადაგიყვანს კურსის გვერდზე"; }
+            });
+            return false;
+        });
+    }
+});
+</script>
+{% endblock %}

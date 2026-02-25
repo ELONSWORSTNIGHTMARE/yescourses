@@ -366,10 +366,19 @@ def handle_large_upload(e):
     return redirect(url_for("admin_page"))
 
 
+@app.route("/admin/upload_video.html")
+def admin_upload_video_page():
+    if not session.get("is_admin"):
+        flash("ადმინისტრატორის შესვლა საჭიროა.", "error")
+        return redirect(url_for("admin_page"))
+    return render_template("upload_video.html", packs=PACKS)
+
+
 @app.route("/admin/upload_video", methods=["GET", "POST"])
 def admin_upload_video():
-    # GET should never show a page here — always go back to admin
     if request.method == "GET":
+        return redirect(url_for("admin_upload_video_page"))
+    if not require_admin():
         return redirect(url_for("admin_page"))
     if not require_admin():
         return redirect(url_for("admin_page"))
